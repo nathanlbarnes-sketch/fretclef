@@ -1,0 +1,3081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FretClef — Interactive Multi-Instrument Sight-Reading Trainer</title>
+  <meta name="description" content="Free, ad-free interactive sight-reading trainer connecting sheet music directly to the fretboard, fingerboard, keyboard, or brass valves across 30 instruments." />
+  <style>
+    :root {
+      --bg-app: #0f1115;
+      --bg-panel: #171a21;
+      --bg-card: #1e222b;
+      --bg-elevated: #262b36;
+      --border: #2e3442;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #f59e0b;
+      --accent-hover: #fbbf24;
+      --accent-soft: rgba(245, 158, 11, 0.16);
+      --success: #10b981;
+      --success-soft: rgba(16, 185, 129, 0.18);
+      --danger: #ef4444;
+      --danger-soft: rgba(239, 68, 68, 0.18);
+      --info: #38bdf8;
+      --info-soft: rgba(56, 189, 248, 0.16);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: var(--bg-app);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px 20px 36px;
+      user-select: none;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 1140px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      width: 42px;
+      height: 42px;
+      border-radius: 11px;
+      background: linear-gradient(135deg, #f59e0b, #b45309);
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 1.25rem;
+      color: #0f1115;
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.28);
+    }
+
+    .brand-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .version-pill {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-hover);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+
+    .brand p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 12px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      padding: 7px 14px;
+      border-radius: 12px;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 56px;
+    }
+
+    .stat-val {
+      font-size: 1rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-val.good { color: var(--success); }
+    .stat-val.accent { color: var(--accent); }
+    .stat-val.info { color: var(--info); }
+
+    .stat-lbl {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    /* Buttons & Controls */
+    .btn {
+      background: var(--bg-elevated);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 8px 13px;
+      border-radius: 9px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.14s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      background: #2f3543;
+      border-color: #475569;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: #111827;
+      border-color: var(--accent);
+    }
+
+    .btn.primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent-hover);
+    }
+
+    .btn.focus-toggle {
+      border-color: rgba(245, 158, 11, 0.45);
+      color: var(--accent-hover);
+    }
+
+    /* Collapsible Settings Drawer */
+    .settings-drawer {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(225px, 1fr));
+      gap: 14px;
+      transition: all 0.22s ease;
+    }
+
+    body.zen-mode .settings-drawer,
+    body.zen-mode .brand p {
+      display: none;
+    }
+
+    body.zen-mode header {
+      padding-bottom: 8px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    select {
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.83rem;
+      font-weight: 500;
+      outline: none;
+      cursor: pointer;
+    }
+
+    select:focus {
+      border-color: var(--accent);
+    }
+
+    .toggle-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .chip {
+      padding: 5px 9px;
+      border-radius: 7px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+
+    .chip.selected {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent-hover);
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.81rem;
+      color: var(--text-main);
+      cursor: pointer;
+      margin-top: 2px;
+    }
+
+    .checkbox-row input {
+      accent-color: var(--accent);
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+    }
+
+    /* Stage / Staff Card */
+    .stage-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 22px 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stage-card.flash-good {
+      border-color: var(--success);
+      box-shadow: 0 0 26px var(--success-soft);
+    }
+
+    .stage-card.flash-bad {
+      border-color: var(--danger);
+      box-shadow: 0 0 26px var(--danger-soft);
+    }
+
+    .stage-card.flash-hint {
+      border-color: var(--accent);
+      box-shadow: 0 0 24px var(--accent-soft);
+    }
+
+    .stage-top {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .prompt-pill {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .prompt-pill span.highlight {
+      color: var(--accent-hover);
+      font-weight: 700;
+    }
+
+    .clef-tag {
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--info-soft);
+      color: var(--info);
+      font-weight: 700;
+    }
+
+    .feedback-banner {
+      font-size: 0.92rem;
+      font-weight: 700;
+      min-height: 22px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feedback-banner.good { color: var(--success); }
+    .feedback-banner.bad { color: var(--danger); }
+    .feedback-banner.hint { color: var(--accent-hover); }
+
+    /* Hint Countdown Bar */
+    .hint-timer-wrap {
+      width: 100%;
+      max-width: 560px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hint-timer-wrap.hidden {
+      display: none;
+    }
+
+    .hint-track {
+      flex: 1;
+      height: 6px;
+      background: var(--bg-card);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .hint-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--info));
+      transition: width 0.08s linear;
+    }
+
+    .hint-fill.urgent {
+      background: var(--accent);
+    }
+
+    .hint-clock {
+      font-size: 0.78rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-muted);
+      min-width: 46px;
+      text-align: right;
+    }
+
+    /* Staff Container */
+    .staff-box {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 6px 16px;
+      width: 100%;
+      max-width: 560px;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.12);
+      display: flex;
+      justify-content: center;
+    }
+
+    /* Note Name Buttons */
+    .note-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 640px;
+      margin-top: 4px;
+    }
+
+    .note-buttons.hidden {
+      display: none;
+    }
+
+    .note-btn {
+      flex: 1 1 66px;
+      max-width: 82px;
+      height: 54px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-size: 1.25rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .note-btn small {
+      font-size: 0.65rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .note-btn:hover {
+      background: var(--bg-elevated);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .note-btn.locked-correct {
+      background: var(--success-soft);
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    .note-btn.hint-pulse {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent-hover);
+      animation: pulseGlow 1.1s infinite ease-in-out;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(245, 158, 11, 0); }
+      50% { transform: scale(1.04); box-shadow: 0 0 18px rgba(245, 158, 11, 0.55); }
+    }
+
+    /* Interactive Instrument Surface */
+    .surface-section {
+      width: 100%;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .surface-section.hidden {
+      display: none;
+    }
+
+    .surface-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .surface-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .orientation-badge {
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .surface-scroll {
+      width: 100%;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    svg#instrument-svg {
+      width: 100%;
+      min-width: 780px;
+      height: auto;
+      display: block;
+      border-radius: 10px;
+    }
+
+    .fret-hit, .piano-key {
+      cursor: pointer;
+    }
+
+    .fret-hit:hover .hover-ring {
+      opacity: 1;
+    }
+
+    .piano-key:hover rect {
+      filter: brightness(0.92);
+    }
+
+    /* Interactive 3-Valve Brass Simulator */
+    .brass-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 0 6px;
+    }
+
+    .valves-row {
+      display: flex;
+      gap: 22px;
+      justify-content: center;
+      align-items: flex-end;
+    }
+
+    .valve-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .valve-cap {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fde68a, #d97706 70%, #78350f);
+      border: 3px solid #fbbf24;
+      box-shadow: 0 8px 0 #78350f, 0 12px 20px rgba(0,0,0,0.45);
+      display: grid;
+      place-items: center;
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: #1c1917;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+
+    .valve-unit.pressed .valve-cap {
+      transform: translateY(6px);
+      box-shadow: 0 2px 0 #78350f, 0 4px 8px rgba(0,0,0,0.5);
+      background: radial-gradient(circle at 35% 30%, #fef08a, #f59e0b 75%, #92400e);
+    }
+
+    .valve-unit.hint-valve .valve-cap {
+      outline: 4px solid var(--info);
+      outline-offset: 4px;
+    }
+
+    .valve-label {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .brass-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .combo-readout {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Session Complete Modal Overlay */
+    .summary-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 11, 16, 0.82);
+      backdrop-filter: blur(6px);
+      display: none;
+      place-items: center;
+      padding: 20px;
+      z-index: 50;
+    }
+
+    .summary-overlay.open {
+      display: grid;
+    }
+
+    .summary-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--accent);
+      border-radius: 18px;
+      padding: 28px;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      text-align: center;
+    }
+
+    .summary-card h2 {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--accent-hover);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .summary-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .summary-box .big {
+      font-size: 1.35rem;
+      font-weight: 800;
+      margin-bottom: 2px;
+    }
+
+    .summary-box .lbl {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .footer-hints {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      padding: 0 4px;
+    }
+
+    kbd {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.72rem;
+      color: var(--text-main);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Top Header -->
+    <header>
+      <div class="brand">
+        <div class="brand-badge">𝄞</div>
+        <div>
+          <div class="brand-title-row">
+            <h1 id="app-title">FretClef</h1>
+            <span class="version-pill">30 Instruments · Free &amp; Ad-Free</span>
+          </div>
+          <p id="app-subtitle">Mandolin · G3 · D4 · A4 · E5 (Standard Fifths)</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="stats-bar">
+          <div class="stat-item">
+            <span class="stat-val accent" id="stat-progress">0 / 20</span>
+            <span class="stat-lbl">Progress</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-val good" id="stat-acc">100%</span>
+            <span class="stat-lbl">Clean Acc</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-val" id="stat-avg">0.0s</span>
+            <span class="stat-lbl">Avg Speed</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-val info" id="stat-assisted">0</span>
+            <span class="stat-lbl">Assisted</span>
+          </div>
+        </div>
+
+        <button class="btn focus-toggle" id="btn-focus" title="Shortcut: H">
+          <span id="focus-icon">👁️</span> <span id="focus-text">Hide Settings</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Collapsible Settings Drawer -->
+    <section class="settings-drawer" id="settings-drawer">
+      <div class="control-group">
+        <span class="control-label">Instrument &amp; Genre (30)</span>
+        <select id="sel-instrument"></select>
+        <select id="sel-mode">
+          <option value="surface">Instrument Click (Staff + Neck/Keys)</option>
+          <option value="hybrid">Hybrid (Name Note → Click Instrument)</option>
+          <option value="buttons">Note Names Only (Staff + A–G)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <span class="control-label" id="lbl-range">Position / Range &amp; Matching</span>
+        <select id="sel-range"></select>
+        <select id="sel-match">
+          <option value="exact">Exact Octave Pitch (Recommended)</option>
+          <option value="pitchclass">Any Octave (Pitch Class Only)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <span class="control-label" id="lbl-strings">Active Strings / Registers</span>
+        <div class="toggle-row" id="string-toggles"></div>
+        <select id="sel-accidentals">
+          <option value="natural">Natural Notes Only (C Major)</option>
+          <option value="sharps">Include Sharps (#)</option>
+          <option value="flats">Include Flats (b)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <span class="control-label">Novice Hint Timer &amp; Session</span>
+        <div style="display:flex; gap:6px;">
+          <select id="sel-hint-timer" style="flex:1;">
+            <option value="0">Hint Timer: Off</option>
+            <option value="3">Hint: 3 sec</option>
+            <option value="5" selected>Hint: 5 sec</option>
+            <option value="8">Hint: 8 sec</option>
+            <option value="10">Hint: 10 sec</option>
+          </select>
+          <select id="sel-session-len" style="flex:1;">
+            <option value="0">Endless</option>
+            <option value="8">8 Notes</option>
+            <option value="10">10 Notes</option>
+            <option value="20" selected>20 Notes</option>
+            <option value="30">30 Notes</option>
+            <option value="50">50 Notes</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:2px;">
+          <button class="btn active" id="btn-audio" style="flex:1; justify-content:center;">🔊 Sound: ON</button>
+          <button class="btn" id="btn-reset" style="justify-content:center;">↺ Reset</button>
+        </div>
+        <label class="checkbox-row">
+          <input type="checkbox" id="chk-auto-hide" />
+          <span>Auto-hide settings on first note</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- Main Center Stage -->
+    <main class="stage-card" id="stage-card">
+      <div class="stage-top">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <div class="prompt-pill" id="prompt-pill">
+            Click the matching position on the <span class="highlight">instrument</span>
+          </div>
+          <span class="clef-tag" id="clef-tag">Treble Clef</span>
+        </div>
+
+        <div class="feedback-banner" id="feedback-banner"></div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn" id="btn-lookahead" title="Show previous & next notes to train reading ahead (Shortcut: L)">
+            👀 Look-Ahead: OFF
+          </button>
+          <button class="btn" id="btn-hear" title="Shortcut: Spacebar">🎵 Hear Note</button>
+          <button class="btn" id="btn-skip" title="Shortcut: Right Arrow">Skip →</button>
+        </div>
+      </div>
+
+      <!-- Novice Helper Countdown Bar -->
+      <div class="hint-timer-wrap" id="hint-timer-wrap">
+        <div class="hint-track">
+          <div class="hint-fill" id="hint-fill"></div>
+        </div>
+        <span class="hint-clock" id="hint-clock">5.0s</span>
+      </div>
+
+      <!-- High-Contrast Musical Staff SVG -->
+      <div class="staff-box">
+        <svg id="staff-svg" width="480" height="210" viewBox="0 0 480 210"></svg>
+      </div>
+
+      <!-- Note Name Buttons -->
+      <div class="note-buttons hidden" id="note-buttons">
+        <button class="note-btn" data-letter="C">C<small>Key C</small></button>
+        <button class="note-btn" data-letter="D">D<small>Key D</small></button>
+        <button class="note-btn" data-letter="E">E<small>Key E</small></button>
+        <button class="note-btn" data-letter="F">F<small>Key F</small></button>
+        <button class="note-btn" data-letter="G">G<small>Key G</small></button>
+        <button class="note-btn" data-letter="A">A<small>Key A</small></button>
+        <button class="note-btn" data-letter="B">B<small>Key B</small></button>
+      </div>
+    </main>
+
+    <!-- Interactive Instrument Surface -->
+    <section class="surface-section" id="surface-section">
+      <div class="surface-header">
+        <div class="surface-title">
+          <span id="surface-title-text">Mandolin Fretboard</span>
+          <span class="orientation-badge" id="orientation-label">TAB View (High Top → Low Bottom)</span>
+        </div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn" id="btn-study">🏷️ Show All Notes: OFF</button>
+          <button class="btn" id="btn-flip">⇅ Flip Neck View</button>
+        </div>
+      </div>
+
+      <div class="surface-scroll" id="svg-surface-wrap">
+        <svg id="instrument-svg" viewBox="0 0 960 245"></svg>
+      </div>
+
+      <!-- 3-Valve Brass Interactive Panel (Shown only for Brass Instruments) -->
+      <div class="brass-panel" id="brass-surface-wrap" style="display:none;">
+        <div class="valves-row">
+          <div class="valve-unit" data-valve="1" id="valve-1">
+            <div class="valve-cap">1</div>
+            <span class="valve-label">Valve 1 (Key 1)</span>
+          </div>
+          <div class="valve-unit" data-valve="2" id="valve-2">
+            <div class="valve-cap">2</div>
+            <span class="valve-label">Valve 2 (Key 2)</span>
+          </div>
+          <div class="valve-unit" data-valve="3" id="valve-3">
+            <div class="valve-cap">3</div>
+            <span class="valve-label">Valve 3 (Key 3)</span>
+          </div>
+        </div>
+        <div class="brass-actions">
+          <span class="combo-readout" id="valve-readout">Selected Fingering: Open (0)</span>
+          <button class="btn primary" id="btn-submit-valves">Play Fingering (Enter)</button>
+          <button class="btn" id="btn-clear-valves">Clear Valves</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer-hints">
+      <span>Shortcuts: <kbd>A</kbd>–<kbd>G</kbd> Note · <kbd>L</kbd> Look-Ahead · <kbd>Space</kbd> Hear · <kbd>H</kbd> Settings · <kbd>→</kbd> Skip</span>
+      <span id="tuning-footer">FretClef · Open Educational Resource for Music Educators &amp; Students</span>
+    </div>
+  </div>
+
+  <!-- Automatic Session Complete Modal -->
+  <div class="summary-overlay" id="summary-overlay">
+    <div class="summary-card">
+      <h2>Session Complete!</h2>
+      <p style="font-size:0.88rem; color:var(--text-muted);" id="summary-subtitle">
+        20-Note Sight-Reading Drill Finished
+      </p>
+
+      <div class="summary-grid">
+        <div class="summary-box">
+          <div class="big" style="color:var(--accent-hover);" id="sum-time">0.0s</div>
+          <div class="lbl">Total Time</div>
+        </div>
+        <div class="summary-box">
+          <div class="big" id="sum-avg">0.00s</div>
+          <div class="lbl">Avg / Note</div>
+        </div>
+        <div class="summary-box">
+          <div class="big" style="color:var(--success);" id="sum-acc">100%</div>
+          <div class="lbl">Clean Accuracy</div>
+        </div>
+        <div class="summary-box">
+          <div class="big" style="color:var(--info);" id="sum-assisted">0</div>
+          <div class="lbl">Hint Assisted</div>
+        </div>
+      </div>
+
+      <button class="btn primary" id="btn-run-again" style="justify-content:center; padding:12px; font-size:0.95rem;">
+        ↻ Run Another Session
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. MULTI-INSTRUMENT PROFILES (30 INSTRUMENTS ACROSS 6 FAMILIES)
+    // =========================================================================
+    const INSTRUMENTS = {
+      mandolin: {
+        group: "Folk, Bluegrass & Celtic",
+        name: "Mandolin",
+        tuningLabel: "G3 · D4 · A4 · E5 (Standard Fifths)",
+        clef: "treble",
+        displayShift: 0,
+        surfaceType: "fretted",
+        dualCourse: true,
+        fretless: false,
+        timbre: "pluck",
+        totalFrets: 12,
+        ranges: [
+          { value: 7, label: "1st Position (Frets 0–7)" },
+          { value: 2, label: "Open & 1st Finger (Frets 0–2)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "G3", openMidi: 55, gauge: 3.1, wound: true },
+          { index: 1, name: "D4", openMidi: 62, gauge: 2.4, wound: true },
+          { index: 2, name: "A4", openMidi: 69, gauge: 1.8, wound: false },
+          { index: 3, name: "E5", openMidi: 76, gauge: 1.3, wound: false }
+        ]
+      },
+      octave_mandolin: {
+        group: "Folk, Bluegrass & Celtic",
+        name: "Octave Mandolin",
+        tuningLabel: "G2 · D3 · A3 · E4 (Octave Treble)",
+        clef: "treble8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: true,
+        fretless: false,
+        timbre: "pluck",
+        totalFrets: 12,
+        ranges: [
+          { value: 7, label: "1st Position (Frets 0–7)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "G2", openMidi: 43, gauge: 3.6, wound: true },
+          { index: 1, name: "D3", openMidi: 50, gauge: 2.9, wound: true },
+          { index: 2, name: "A3", openMidi: 57, gauge: 2.2, wound: true },
+          { index: 3, name: "E4", openMidi: 64, gauge: 1.6, wound: false }
+        ]
+      },
+      mandola: {
+        group: "Folk, Bluegrass & Celtic",
+        name: "Tenor Mandola",
+        tuningLabel: "C3 · G3 · D4 · A4 (Alto Clef Fifths)",
+        clef: "alto",
+        displayShift: 0,
+        surfaceType: "fretted",
+        dualCourse: true,
+        fretless: false,
+        timbre: "pluck",
+        totalFrets: 12,
+        ranges: [
+          { value: 7, label: "1st Position (Frets 0–7)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "C3", openMidi: 48, gauge: 3.4, wound: true },
+          { index: 1, name: "G3", openMidi: 55, gauge: 2.8, wound: true },
+          { index: 2, name: "D4", openMidi: 62, gauge: 2.1, wound: true },
+          { index: 3, name: "A4", openMidi: 69, gauge: 1.6, wound: false }
+        ]
+      },
+      bouzouki: {
+        group: "Folk, Bluegrass & Celtic",
+        name: "Irish Bouzouki (GDAD)",
+        tuningLabel: "G2 · D3 · A3 · D4 (Octave Treble)",
+        clef: "treble8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: true,
+        fretless: false,
+        timbre: "pluck",
+        totalFrets: 12,
+        ranges: [
+          { value: 7, label: "Lower Neck (Frets 0–7)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "G2", openMidi: 43, gauge: 3.6, wound: true },
+          { index: 1, name: "D3", openMidi: 50, gauge: 2.9, wound: true },
+          { index: 2, name: "A3", openMidi: 57, gauge: 2.2, wound: true },
+          { index: 3, name: "D4", openMidi: 62, gauge: 1.7, wound: false }
+        ]
+      },
+      cittern: {
+        group: "Folk, Bluegrass & Celtic",
+        name: "Celtic Cittern (5-Course)",
+        tuningLabel: "D2 · G2 · D3 · A3 · D4 (Octave Treble)",
+        clef: "treble8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: true,
+        fretless: false,
+        timbre: "pluck",
+        totalFrets: 12,
+        ranges: [
+          { value: 7, label: "Lower Neck (Frets 0–7)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "D2", openMidi: 38, gauge: 3.9, wound: true },
+          { index: 1, name: "G2", openMidi: 43, gauge: 3.4, wound: true },
+          { index: 2, name: "D3", openMidi: 50, gauge: 2.8, wound: true },
+          { index: 3, name: "A3", openMidi: 57, gauge: 2.1, wound: true },
+          { index: 4, name: "D4", openMidi: 62, gauge: 1.6, wound: false }
+        ]
+      },
+      banjo5: {
+        group: "Folk, Bluegrass & Celtic",
+        name: "5-String Banjo (Open G)",
+        tuningLabel: "g4 (5th Fret Drone) · D3 · G3 · B3 · D4",
+        clef: "treble8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: false,
+        timbre: "banjo",
+        totalFrets: 12,
+        ranges: [
+          { value: 5, label: "Open / First Position (Frets 0–5)" },
+          { value: 9, label: "Mid Neck (Frets 0–9)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "D3", openMidi: 50, gauge: 2.6, wound: true, startFret: 0 },
+          { index: 1, name: "G3", openMidi: 55, gauge: 2.1, wound: false, startFret: 0 },
+          { index: 2, name: "B3", openMidi: 59, gauge: 1.7, wound: false, startFret: 0 },
+          { index: 3, name: "D4", openMidi: 62, gauge: 1.4, wound: false, startFret: 0 },
+          { index: 4, name: "g4", openMidi: 67, gauge: 1.3, wound: false, startFret: 5 }
+        ]
+      },
+      tenor_banjo_irish: {
+        group: "Folk, Bluegrass & Celtic",
+        name: "Tenor Banjo (Irish GDAE)",
+        tuningLabel: "G2 · D3 · A3 · E4 (Octave Below Mandolin)",
+        clef: "treble8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: false,
+        timbre: "banjo",
+        totalFrets: 12,
+        ranges: [
+          { value: 7, label: "1st Position (Frets 0–7)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "G2", openMidi: 43, gauge: 3.2, wound: true },
+          { index: 1, name: "D3", openMidi: 50, gauge: 2.5, wound: true },
+          { index: 2, name: "A3", openMidi: 57, gauge: 1.9, wound: false },
+          { index: 3, name: "E4", openMidi: 64, gauge: 1.4, wound: false }
+        ]
+      },
+      tenor_banjo_jazz: {
+        group: "Folk, Bluegrass & Celtic",
+        name: "Tenor Banjo (Jazz CGDA)",
+        tuningLabel: "C3 · G3 · D4 · A4 (Standard Dixieland)",
+        clef: "treble8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: false,
+        timbre: "banjo",
+        totalFrets: 12,
+        ranges: [
+          { value: 7, label: "1st Position (Frets 0–7)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "C3", openMidi: 48, gauge: 3.1, wound: true },
+          { index: 1, name: "G3", openMidi: 55, gauge: 2.4, wound: true },
+          { index: 2, name: "D4", openMidi: 62, gauge: 1.8, wound: false },
+          { index: 3, name: "A4", openMidi: 69, gauge: 1.4, wound: false }
+        ]
+      },
+      dobro: {
+        group: "Folk, Bluegrass & Celtic",
+        name: "Dobro / Resonator (Open G)",
+        tuningLabel: "G2 · B2 · D3 · G3 · B3 · D4 (Octave Treble)",
+        clef: "treble8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: false,
+        timbre: "pluck",
+        totalFrets: 12,
+        ranges: [
+          { value: 5, label: "Lower Neck (Frets 0–5)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "G2", openMidi: 43, gauge: 3.6, wound: true },
+          { index: 1, name: "B2", openMidi: 47, gauge: 3.1, wound: true },
+          { index: 2, name: "D3", openMidi: 50, gauge: 2.6, wound: true },
+          { index: 3, name: "G3", openMidi: 55, gauge: 2.1, wound: true },
+          { index: 4, name: "B3", openMidi: 59, gauge: 1.7, wound: false },
+          { index: 5, name: "D4", openMidi: 62, gauge: 1.4, wound: false }
+        ]
+      },
+
+      // --- ORCHESTRAL STRINGS ---
+      violin: {
+        group: "Orchestral Strings",
+        name: "Violin",
+        tuningLabel: "G3 · D4 · A4 · E5 (Fretless Fingerboard)",
+        clef: "treble",
+        displayShift: 0,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: true,
+        timbre: "bowed",
+        totalFrets: 12,
+        ranges: [
+          { value: 7, label: "1st Position (Half-Steps 0–7)" },
+          { value: 10, label: "1st–3rd Position (0–10)" },
+          { value: 12, label: "Full Octave Fingerboard (0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "G3", openMidi: 55, gauge: 2.8, wound: true },
+          { index: 1, name: "D4", openMidi: 62, gauge: 2.2, wound: true },
+          { index: 2, name: "A4", openMidi: 69, gauge: 1.7, wound: false },
+          { index: 3, name: "E5", openMidi: 76, gauge: 1.2, wound: false }
+        ]
+      },
+      viola: {
+        group: "Orchestral Strings",
+        name: "Viola",
+        tuningLabel: "C3 · G3 · D4 · A4 (Alto Clef · Fretless)",
+        clef: "alto",
+        displayShift: 0,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: true,
+        timbre: "bowed",
+        totalFrets: 12,
+        ranges: [
+          { value: 7, label: "1st Position (Half-Steps 0–7)" },
+          { value: 12, label: "Full Octave Fingerboard (0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "C3", openMidi: 48, gauge: 3.2, wound: true },
+          { index: 1, name: "G3", openMidi: 55, gauge: 2.6, wound: true },
+          { index: 2, name: "D4", openMidi: 62, gauge: 2.0, wound: true },
+          { index: 3, name: "A4", openMidi: 69, gauge: 1.5, wound: false }
+        ]
+      },
+      cello: {
+        group: "Orchestral Strings",
+        name: "Cello (Violoncello)",
+        tuningLabel: "C2 · G2 · D3 · A3 (Bass Clef · Fretless)",
+        clef: "bass",
+        displayShift: 0,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: true,
+        timbre: "bowed",
+        totalFrets: 12,
+        ranges: [
+          { value: 4, label: "1st Position (Half-Steps 0–4)" },
+          { value: 7, label: "1st–4th Position (0–7)" },
+          { value: 12, label: "Full Octave Fingerboard (0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "C2", openMidi: 36, gauge: 3.8, wound: true },
+          { index: 1, name: "G2", openMidi: 43, gauge: 3.1, wound: true },
+          { index: 2, name: "D3", openMidi: 50, gauge: 2.5, wound: true },
+          { index: 3, name: "A3", openMidi: 57, gauge: 1.9, wound: false }
+        ]
+      },
+      upright_bass: {
+        group: "Orchestral Strings",
+        name: "Double Bass / Upright",
+        tuningLabel: "E1 · A1 · D2 · G2 (Octave Bass Clef · Fretless)",
+        clef: "bass8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: true,
+        timbre: "bowed",
+        totalFrets: 12,
+        ranges: [
+          { value: 5, label: "Half & 1st Position (0–5)" },
+          { value: 12, label: "Full Neck (0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "E1", openMidi: 28, gauge: 4.4, wound: true },
+          { index: 1, name: "A1", openMidi: 33, gauge: 3.7, wound: true },
+          { index: 2, name: "D2", openMidi: 38, gauge: 3.1, wound: true },
+          { index: 3, name: "G2", openMidi: 43, gauge: 2.5, wound: true }
+        ]
+      },
+
+      // --- GUITAR & ELECTRIC BASS ---
+      guitar_std: {
+        group: "Guitar & Electric Bass",
+        name: "Guitar (6-String Standard)",
+        tuningLabel: "E2 · A2 · D3 · G3 · B3 · E4 (Octave Treble)",
+        clef: "treble8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: false,
+        timbre: "pluck",
+        totalFrets: 12,
+        ranges: [
+          { value: 3, label: "Open Position (Frets 0–3)" },
+          { value: 5, label: "1st–5th Fret (Frets 0–5)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "E2", openMidi: 40, gauge: 3.4, wound: true },
+          { index: 1, name: "A2", openMidi: 45, gauge: 2.9, wound: true },
+          { index: 2, name: "D3", openMidi: 50, gauge: 2.4, wound: true },
+          { index: 3, name: "G3", openMidi: 55, gauge: 1.9, wound: false },
+          { index: 4, name: "B3", openMidi: 59, gauge: 1.5, wound: false },
+          { index: 5, name: "E4", openMidi: 64, gauge: 1.2, wound: false }
+        ]
+      },
+      guitar_drop_d: {
+        group: "Guitar & Electric Bass",
+        name: "Guitar (Drop D)",
+        tuningLabel: "D2 · A2 · D3 · G3 · B3 · E4 (Octave Treble)",
+        clef: "treble8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: false,
+        timbre: "pluck",
+        totalFrets: 12,
+        ranges: [
+          { value: 5, label: "Lower Neck (Frets 0–5)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "D2", openMidi: 38, gauge: 3.6, wound: true },
+          { index: 1, name: "A2", openMidi: 45, gauge: 2.9, wound: true },
+          { index: 2, name: "D3", openMidi: 50, gauge: 2.4, wound: true },
+          { index: 3, name: "G3", openMidi: 55, gauge: 1.9, wound: false },
+          { index: 4, name: "B3", openMidi: 59, gauge: 1.5, wound: false },
+          { index: 5, name: "E4", openMidi: 64, gauge: 1.2, wound: false }
+        ]
+      },
+      guitar_dadgad: {
+        group: "Guitar & Electric Bass",
+        name: "Guitar (DADGAD Modal)",
+        tuningLabel: "D2 · A2 · D3 · G3 · A3 · D4 (Octave Treble)",
+        clef: "treble8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: false,
+        timbre: "pluck",
+        totalFrets: 12,
+        ranges: [
+          { value: 5, label: "Lower Neck (Frets 0–5)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "D2", openMidi: 38, gauge: 3.6, wound: true },
+          { index: 1, name: "A2", openMidi: 45, gauge: 2.9, wound: true },
+          { index: 2, name: "D3", openMidi: 50, gauge: 2.4, wound: true },
+          { index: 3, name: "G3", openMidi: 55, gauge: 1.9, wound: false },
+          { index: 4, name: "A3", openMidi: 57, gauge: 1.6, wound: false },
+          { index: 5, name: "D4", openMidi: 62, gauge: 1.3, wound: false }
+        ]
+      },
+      guitar_7str: {
+        group: "Guitar & Electric Bass",
+        name: "Guitar (7-String Low B)",
+        tuningLabel: "B1 · E2 · A2 · D3 · G3 · B3 · E4 (Octave Treble)",
+        clef: "treble8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: false,
+        timbre: "pluck",
+        totalFrets: 12,
+        ranges: [
+          { value: 5, label: "Lower Neck (Frets 0–5)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "B1", openMidi: 35, gauge: 4.0, wound: true },
+          { index: 1, name: "E2", openMidi: 40, gauge: 3.4, wound: true },
+          { index: 2, name: "A2", openMidi: 45, gauge: 2.9, wound: true },
+          { index: 3, name: "D3", openMidi: 50, gauge: 2.4, wound: true },
+          { index: 4, name: "G3", openMidi: 55, gauge: 1.9, wound: false },
+          { index: 5, name: "B3", openMidi: 59, gauge: 1.5, wound: false },
+          { index: 6, name: "E4", openMidi: 64, gauge: 1.2, wound: false }
+        ]
+      },
+      bass4: {
+        group: "Guitar & Electric Bass",
+        name: "Electric Bass (4-String)",
+        tuningLabel: "E1 · A1 · D2 · G2 (Octave Bass Clef)",
+        clef: "bass8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: false,
+        timbre: "bass",
+        totalFrets: 12,
+        ranges: [
+          { value: 5, label: "Money Position (Frets 0–5)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "E1", openMidi: 28, gauge: 4.2, wound: true },
+          { index: 1, name: "A1", openMidi: 33, gauge: 3.5, wound: true },
+          { index: 2, name: "D2", openMidi: 38, gauge: 2.9, wound: true },
+          { index: 3, name: "G2", openMidi: 43, gauge: 2.3, wound: true }
+        ]
+      },
+      bass5: {
+        group: "Guitar & Electric Bass",
+        name: "Electric Bass (5-String Low B)",
+        tuningLabel: "B0 · E1 · A1 · D2 · G2 (Octave Bass Clef)",
+        clef: "bass8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: false,
+        timbre: "bass",
+        totalFrets: 12,
+        ranges: [
+          { value: 5, label: "Lower Neck (Frets 0–5)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "B0", openMidi: 23, gauge: 4.8, wound: true },
+          { index: 1, name: "E1", openMidi: 28, gauge: 4.1, wound: true },
+          { index: 2, name: "A1", openMidi: 33, gauge: 3.4, wound: true },
+          { index: 3, name: "D2", openMidi: 38, gauge: 2.8, wound: true },
+          { index: 4, name: "G2", openMidi: 43, gauge: 2.2, wound: true }
+        ]
+      },
+
+      // --- UKULELE FAMILY ---
+      uke_high_g: {
+        group: "Ukulele Family",
+        name: "Ukulele (Standard High-G)",
+        tuningLabel: "G4 · C4 · E4 · A4 (Re-entrant Treble)",
+        clef: "treble",
+        displayShift: 0,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: false,
+        timbre: "pluck",
+        totalFrets: 12,
+        ranges: [
+          { value: 5, label: "Open Position (Frets 0–5)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "G4", openMidi: 67, gauge: 1.7, wound: false },
+          { index: 1, name: "C4", openMidi: 60, gauge: 2.3, wound: false },
+          { index: 2, name: "E4", openMidi: 64, gauge: 1.9, wound: false },
+          { index: 3, name: "A4", openMidi: 69, gauge: 1.5, wound: false }
+        ]
+      },
+      uke_low_g: {
+        group: "Ukulele Family",
+        name: "Ukulele (Linear Low-G)",
+        tuningLabel: "G3 · C4 · E4 · A4 (Linear Treble)",
+        clef: "treble",
+        displayShift: 0,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: false,
+        timbre: "pluck",
+        totalFrets: 12,
+        ranges: [
+          { value: 5, label: "Open Position (Frets 0–5)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "G3", openMidi: 55, gauge: 2.6, wound: true },
+          { index: 1, name: "C4", openMidi: 60, gauge: 2.2, wound: false },
+          { index: 2, name: "E4", openMidi: 64, gauge: 1.8, wound: false },
+          { index: 3, name: "A4", openMidi: 69, gauge: 1.5, wound: false }
+        ]
+      },
+      uke_baritone: {
+        group: "Ukulele Family",
+        name: "Baritone Ukulele (DGBE)",
+        tuningLabel: "D3 · G3 · B3 · E4 (Octave Treble)",
+        clef: "treble8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: false,
+        timbre: "pluck",
+        totalFrets: 12,
+        ranges: [
+          { value: 5, label: "Open Position (Frets 0–5)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "D3", openMidi: 50, gauge: 2.6, wound: true },
+          { index: 1, name: "G3", openMidi: 55, gauge: 2.1, wound: true },
+          { index: 2, name: "B3", openMidi: 59, gauge: 1.7, wound: false },
+          { index: 3, name: "E4", openMidi: 64, gauge: 1.4, wound: false }
+        ]
+      },
+      uke_bass: {
+        group: "Ukulele Family",
+        name: "U-Bass / Bass Ukulele",
+        tuningLabel: "E1 · A1 · D2 · G2 (Octave Bass Clef)",
+        clef: "bass8vb",
+        displayShift: 12,
+        surfaceType: "fretted",
+        dualCourse: false,
+        fretless: false,
+        timbre: "bass",
+        totalFrets: 12,
+        ranges: [
+          { value: 5, label: "Lower Neck (Frets 0–5)" },
+          { value: 12, label: "Full Neck (Frets 0–12)" }
+        ],
+        strings: [
+          { index: 0, name: "E1", openMidi: 28, gauge: 4.5, wound: false },
+          { index: 1, name: "A1", openMidi: 33, gauge: 3.8, wound: false },
+          { index: 2, name: "D2", openMidi: 38, gauge: 3.2, wound: false },
+          { index: 3, name: "G2", openMidi: 43, gauge: 2.6, wound: false }
+        ]
+      },
+
+      // --- KEYBOARD & MALLET PERCUSSION ---
+      piano: {
+        group: "Keyboard & Mallet Percussion",
+        name: "Piano / Keyboard (3-Octave)",
+        tuningLabel: "C3 to B5 · Grand Staff (Treble & Bass Clef)",
+        clef: "grand",
+        displayShift: 0,
+        surfaceType: "keyboard",
+        timbre: "piano",
+        ranges: [
+          { value: "grand", label: "Grand Staff (C3–B5 Both Hands)" },
+          { value: "treble", label: "Right Hand Only (Treble C4–B5)" },
+          { value: "bass", label: "Left Hand Only (Bass C3–B4)" }
+        ],
+        strings: [
+          { index: 0, name: "Oct 3 (Bass)", startMidi: 48, endMidi: 59 },
+          { index: 1, name: "Oct 4 (Mid C)", startMidi: 60, endMidi: 71 },
+          { index: 2, name: "Oct 5 (Treble)", startMidi: 72, endMidi: 83 }
+        ]
+      },
+      marimba: {
+        group: "Keyboard & Mallet Percussion",
+        name: "Concert Marimba",
+        tuningLabel: "C3 to B5 · Grand Staff (Concert Pitch)",
+        clef: "grand",
+        displayShift: 0,
+        surfaceType: "keyboard",
+        timbre: "mallet",
+        ranges: [
+          { value: "grand", label: "Full 3-Octave Range (C3–B5)" },
+          { value: "treble", label: "Upper Register (C4–B5)" },
+          { value: "bass", label: "Lower Register (C3–B4)" }
+        ],
+        strings: [
+          { index: 0, name: "Oct 3", startMidi: 48, endMidi: 59 },
+          { index: 1, name: "Oct 4", startMidi: 60, endMidi: 71 },
+          { index: 2, name: "Oct 5", startMidi: 72, endMidi: 83 }
+        ]
+      },
+      vibraphone: {
+        group: "Keyboard & Mallet Percussion",
+        name: "Vibraphone",
+        tuningLabel: "F3 to F6 (Treble Clef · Concert Pitch)",
+        clef: "treble",
+        displayShift: 0,
+        surfaceType: "keyboard",
+        timbre: "mallet",
+        ranges: [
+          { value: "treble", label: "Standard Vibes Range (C4–B5)" },
+          { value: "grand", label: "Extended Low Register (C3–B5)" }
+        ],
+        strings: [
+          { index: 0, name: "Oct 3", startMidi: 53, endMidi: 59 },
+          { index: 1, name: "Oct 4", startMidi: 60, endMidi: 71 },
+          { index: 2, name: "Oct 5", startMidi: 72, endMidi: 83 }
+        ]
+      },
+
+      // --- BRASS VALVES (3-VALVE FINGERING SIMULATOR) ---
+      trumpet_bb: {
+        group: "Brass Valves (3-Valve)",
+        name: "Bb Trumpet / Cornet",
+        tuningLabel: "Written F#3–G5 (Sounds Major 2nd Lower)",
+        clef: "treble",
+        displayShift: 2,
+        surfaceType: "valves",
+        timbre: "brass",
+        ranges: [
+          { value: "beginner", label: "First Octave (Written C4–G4)" },
+          { value: "intermediate", label: "Standard Band Range (Written G3–E5)" },
+          { value: "full", label: "Full Valve Range (Written F#3–G5)" }
+        ],
+        strings: [
+          { index: 0, name: "Low (F#3–B3)", minW: 54, maxW: 59 },
+          { index: 1, name: "Mid (C4–B4)", minW: 60, maxW: 71 },
+          { index: 2, name: "High (C5–G5)", minW: 72, maxW: 79 }
+        ],
+        fingerings: {
+          54: ["123"], 55: ["13"], 56: ["23"], 57: ["12"], 58: ["1"], 59: ["2"],
+          60: ["0"], 61: ["123"], 62: ["13"], 63: ["23"], 64: ["12"], 65: ["1"],
+          66: ["2"], 67: ["0"], 68: ["23"], 69: ["12"], 70: ["1"], 71: ["2"],
+          72: ["0"], 73: ["12"], 74: ["1"], 75: ["2"], 76: ["0"], 77: ["1"],
+          78: ["2"], 79: ["0"]
+        }
+      },
+      flugelhorn: {
+        group: "Brass Valves (3-Valve)",
+        name: "Bb Flugelhorn",
+        tuningLabel: "Written F#3–G5 (Sounds Major 2nd Lower)",
+        clef: "treble",
+        displayShift: 2,
+        surfaceType: "valves",
+        timbre: "brass",
+        ranges: [
+          { value: "intermediate", label: "Standard Range (Written G3–E5)" },
+          { value: "full", label: "Full Valve Range (Written F#3–G5)" }
+        ],
+        strings: [
+          { index: 0, name: "Low (F#3–B3)", minW: 54, maxW: 59 },
+          { index: 1, name: "Mid (C4–B4)", minW: 60, maxW: 71 },
+          { index: 2, name: "High (C5–G5)", minW: 72, maxW: 79 }
+        ],
+        fingerings: {
+          54: ["123"], 55: ["13"], 56: ["23"], 57: ["12"], 58: ["1"], 59: ["2"],
+          60: ["0"], 61: ["123"], 62: ["13"], 63: ["23"], 64: ["12"], 65: ["1"],
+          66: ["2"], 67: ["0"], 68: ["23"], 69: ["12"], 70: ["1"], 71: ["2"],
+          72: ["0"], 73: ["12"], 74: ["1"], 75: ["2"], 76: ["0"], 77: ["1"],
+          78: ["2"], 79: ["0"]
+        }
+      },
+      euphonium: {
+        group: "Brass Valves (3-Valve)",
+        name: "Euphonium / Baritone (Bass Clef)",
+        tuningLabel: "Concert E2–F4 (Bass Clef · Non-Transposing)",
+        clef: "bass",
+        displayShift: 0,
+        surfaceType: "valves",
+        timbre: "brass",
+        ranges: [
+          { value: "intermediate", label: "Standard Band Range (F2–D4)" },
+          { value: "full", label: "Full 3-Valve Range (E2–F4)" }
+        ],
+        strings: [
+          { index: 0, name: "Low (E2–A2)", minW: 40, maxW: 45 },
+          { index: 1, name: "Mid (Bb2–A3)", minW: 46, maxW: 57 },
+          { index: 2, name: "High (Bb3–F4)", minW: 58, maxW: 65 }
+        ],
+        fingerings: {
+          40: ["123"], 41: ["13"], 42: ["23"], 43: ["12"], 44: ["1"], 45: ["2"],
+          46: ["0"], 47: ["123"], 48: ["13"], 49: ["23"], 50: ["12"], 51: ["1"],
+          52: ["2"], 53: ["0"], 54: ["23"], 55: ["12"], 56: ["1"], 57: ["2"],
+          58: ["0"], 59: ["12"], 60: ["1"], 61: ["2"], 62: ["0"], 63: ["1"],
+          64: ["2"], 65: ["0"]
+        }
+      },
+      tuba_bbb: {
+        group: "Brass Valves (3-Valve)",
+        name: "BBb Tuba (Bass Clef)",
+        tuningLabel: "Concert E1–F3 (Bass Clef · Non-Transposing)",
+        clef: "bass",
+        displayShift: 0,
+        surfaceType: "valves",
+        timbre: "brass",
+        ranges: [
+          { value: "intermediate", label: "Standard Band Range (F1–D3)" },
+          { value: "full", label: "Full 3-Valve Range (E1–F3)" }
+        ],
+        strings: [
+          { index: 0, name: "Low (E1–A1)", minW: 28, maxW: 33 },
+          { index: 1, name: "Mid (Bb1–A2)", minW: 34, maxW: 45 },
+          { index: 2, name: "High (Bb2–F3)", minW: 46, maxW: 53 }
+        ],
+        fingerings: {
+          28: ["123"], 29: ["13"], 30: ["23"], 31: ["12"], 32: ["1"], 33: ["2"],
+          34: ["0"], 35: ["123"], 36: ["13"], 37: ["23"], 38: ["12"], 39: ["1"],
+          40: ["2"], 41: ["0"], 42: ["23"], 43: ["12"], 44: ["1"], 45: ["2"],
+          46: ["0"], 47: ["12"], 48: ["1"], 49: ["2"], 50: ["0"], 51: ["1"],
+          52: ["2"], 53: ["0"]
+        }
+      }
+    };
+
+    const CLEF_LABELS = {
+      treble: "Treble Clef",
+      treble8vb: "Treble Clef (8vb)",
+      alto: "Alto Clef (C4)",
+      bass: "Bass Clef",
+      bass8vb: "Bass Clef (8vb)",
+      grand: "Grand Staff (Treble + Bass)"
+    };
+
+    // =========================================================================
+    // 2. MUSIC THEORY UTILITIES
+    // =========================================================================
+    const NOTE_NAMES_SHARP = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    const NOTE_NAMES_FLAT  = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+    const LETTER_STEPS = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
+
+    function midiToFreq(midi) {
+      return 440 * Math.pow(2, (midi - 69) / 12);
+    }
+
+    function getNoteInfo(soundMidi, accidentalMode = "natural", displayShift = 0) {
+      const writtenMidi = soundMidi + displayShift;
+      const useFlats = accidentalMode === "flats";
+
+      const pitchClass = writtenMidi % 12;
+      const writtenOctave = Math.floor(writtenMidi / 12) - 1;
+      const soundOctave = Math.floor(soundMidi / 12) - 1;
+
+      const rawName = useFlats ? NOTE_NAMES_FLAT[pitchClass] : NOTE_NAMES_SHARP[pitchClass];
+      const letter = rawName[0];
+      const accidental = rawName.length > 1 ? rawName[1] : "";
+      const writtenStep = (writtenOctave - 4) * 7 + LETTER_STEPS[letter];
+
+      return {
+        midi: soundMidi,
+        writtenMidi,
+        pitchClass,
+        octave: soundOctave,
+        writtenOctave,
+        fullName: `${rawName}${writtenOctave}`,
+        shortName: rawName,
+        letter,
+        accidental,
+        writtenStep
+      };
+    }
+
+    // =========================================================================
+    // 3. MULTI-TIMBRE WEB AUDIO SYNTHESIZER
+    // =========================================================================
+    let audioCtx = null;
+    function ensureAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+    }
+
+    function playInstrumentTone(midi) {
+      if (!state.audioEnabled) return;
+      ensureAudio();
+      const inst = INSTRUMENTS[state.instrumentKey];
+      const now = audioCtx.currentTime;
+      const baseFreq = midiToFreq(midi);
+
+      if (inst.timbre === "bowed") {
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const filter = audioCtx.createBiquadFilter();
+        const gain = audioCtx.createGain();
+
+        osc1.type = "sawtooth";
+        osc2.type = "triangle";
+        osc1.frequency.setValueAtTime(baseFreq, now);
+        osc2.frequency.setValueAtTime(baseFreq * 1.002, now);
+
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(baseFreq * 4.2, now);
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.14, now + 0.09);
+        gain.gain.setValueAtTime(0.12, now + 0.55);
+        gain.gain.exponentialRampToValueAtTime(0.0008, now + 1.15);
+
+        osc1.connect(filter);
+        osc2.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 1.2);
+        osc2.stop(now + 1.2);
+      } else if (inst.timbre === "brass") {
+        const osc = audioCtx.createOscillator();
+        const filter = audioCtx.createBiquadFilter();
+        const gain = audioCtx.createGain();
+
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(baseFreq, now);
+
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(baseFreq * 1.5, now);
+        filter.frequency.linearRampToValueAtTime(baseFreq * 5.2, now + 0.08);
+        filter.frequency.exponentialRampToValueAtTime(baseFreq * 2.8, now + 0.85);
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.17, now + 0.045);
+        gain.gain.setValueAtTime(0.15, now + 0.55);
+        gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.95);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 1.0);
+      } else if (inst.timbre === "piano" || inst.timbre === "mallet") {
+        const decay = inst.timbre === "mallet" ? 0.85 : 1.35;
+        [1, 2].forEach((mult, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = idx === 0 ? "triangle" : "sine";
+          osc.frequency.setValueAtTime(baseFreq * mult, now);
+
+          const peak = idx === 0 ? 0.22 : 0.06;
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(peak, now + 0.008);
+          gain.gain.exponentialRampToValueAtTime(0.0008, now + decay);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + decay + 0.05);
+        });
+      } else {
+        const detunes = inst.dualCourse ? [-1.8, 1.8] : [0];
+        const waveType = inst.timbre === "bass" ? "sine" : inst.timbre === "banjo" ? "sawtooth" : "triangle";
+        const decay = inst.timbre === "banjo" ? 0.72 : 1.15;
+
+        detunes.forEach((cents) => {
+          const osc = audioCtx.createOscillator();
+          const filter = audioCtx.createBiquadFilter();
+          const gain = audioCtx.createGain();
+
+          osc.type = waveType;
+          osc.frequency.setValueAtTime(baseFreq * Math.pow(2, cents / 1200), now);
+
+          filter.type = "lowpass";
+          filter.frequency.setValueAtTime(baseFreq * (inst.timbre === "banjo" ? 7 : 5), now);
+          filter.frequency.exponentialRampToValueAtTime(baseFreq * 1.4, now + decay * 0.6);
+
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(inst.dualCourse ? 0.16 : 0.24, now + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.0008, now + decay);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.start(now);
+          osc.stop(now + decay + 0.05);
+        });
+      }
+    }
+
+    function playWoodTick(isFinal = false) {
+      if (!state.audioEnabled) return;
+      ensureAudio();
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(isFinal ? 1180 : 860, now);
+      osc.frequency.exponentialRampToValueAtTime(isFinal ? 520 : 380, now + 0.045);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(isFinal ? 0.14 : 0.08, now + 0.004);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.055);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.06);
+    }
+
+    function playErrorBuzz() {
+      if (!state.audioEnabled) return;
+      ensureAudio();
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(135, now);
+      osc.frequency.linearRampToValueAtTime(105, now + 0.18);
+      gain.gain.setValueAtTime(0.09, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.22);
+    }
+
+    // =========================================================================
+    // 4. APPLICATION STATE & LOCALSTORAGE PERSISTENCE
+    // =========================================================================
+    const STORAGE_KEY = "fretclef_prefs_v1_1";
+
+    const state = {
+      instrumentKey: "mandolin",
+      mode: "surface",
+      rangeSetting: 7,
+      matchMode: "exact",
+      activeStrings: new Set([0, 1, 2, 3]),
+      accidentals: "natural",
+      hintSeconds: 5,
+      sessionLength: 20,
+      audioEnabled: true,
+      studyLabels: false,
+      lookAhead: false,
+      tabOrientation: true,
+      zenMode: false,
+      autoHideOnStart: false,
+      pressedValves: new Set(),
+
+      // Rolling 3-note queue for Look-Ahead Scroll
+      prevNote: null,
+      currentNote: null,
+      nextNoteObj: null,
+
+      hybridStep: "letter",
+      noteStartTime: 0,
+      sessionStartTime: 0,
+      completedCount: 0,
+      cleanCount: 0,
+      assistedCount: 0,
+      wrongAttemptsOnNote: 0,
+      hintTriggeredOnNote: false,
+      totalSolveMs: 0,
+      lastTickSecond: null,
+      timerHandle: null
+    };
+
+    function savePreferences() {
+      try {
+        const payload = {
+          instrumentKey: state.instrumentKey,
+          mode: state.mode,
+          accidentals: state.accidentals,
+          hintSeconds: state.hintSeconds,
+          sessionLength: state.sessionLength,
+          audioEnabled: state.audioEnabled,
+          lookAhead: state.lookAhead,
+          tabOrientation: state.tabOrientation,
+          autoHideOnStart: state.autoHideOnStart
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch (err) {
+        // Ignore storage errors
+      }
+    }
+
+    function loadPreferences() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const prefs = JSON.parse(raw);
+        if (prefs.instrumentKey && INSTRUMENTS[prefs.instrumentKey]) {
+          state.instrumentKey = prefs.instrumentKey;
+        }
+        if (prefs.mode) state.mode = prefs.mode;
+        if (prefs.accidentals) state.accidentals = prefs.accidentals;
+        if (typeof prefs.hintSeconds === "number") state.hintSeconds = prefs.hintSeconds;
+        if (typeof prefs.sessionLength === "number") state.sessionLength = prefs.sessionLength;
+        if (typeof prefs.audioEnabled === "boolean") state.audioEnabled = prefs.audioEnabled;
+        if (typeof prefs.lookAhead === "boolean") state.lookAhead = prefs.lookAhead;
+        if (typeof prefs.tabOrientation === "boolean") state.tabOrientation = prefs.tabOrientation;
+        if (typeof prefs.autoHideOnStart === "boolean") state.autoHideOnStart = prefs.autoHideOnStart;
+      } catch (err) {
+        // Use defaults
+      }
+    }
+
+    // =========================================================================
+    // 5. MULTI-CLEF STAFF RENDERER WITH LOOK-AHEAD SCROLL (PREV · NOW · NEXT)
+    // =========================================================================
+    function drawSingleStaffNote(note, noteX, getStepY, bottomStep, topStep, role) {
+      if (!note) return "";
+
+      // Role styling: 'current' (full contrast + focus halo), 'prev' (faded resolved), 'next' (subtle preview)
+      const isCurrent = role === "current";
+      const isPrev = role === "prev";
+      const color = isCurrent ? "#0f172a" : isPrev ? "#64748b" : "#475569";
+      const opacity = isCurrent ? 1 : isPrev ? 0.34 : 0.52;
+      const scale = isCurrent ? 1 : 0.84;
+      const noteY = getStepY(note.writtenStep);
+
+      let out = `<g opacity="${opacity}">`;
+
+      // Subtle vertical focus guide & role label when Look-Ahead Scroll is active
+      if (state.lookAhead) {
+        if (isCurrent) {
+          out += `
+            <rect x="${noteX - 24}" y="18" width="48" height="156" rx="8" fill="rgba(245, 158, 11, 0.10)" stroke="rgba(245, 158, 11, 0.38)" stroke-width="1.2" />
+            <text x="${noteX}" y="14" text-anchor="middle" font-family="sans-serif" font-size="9.5" font-weight="800" fill="#d97706">NOW</text>
+          `;
+        } else {
+          const tag = isPrev ? "PREV" : "NEXT";
+          out += `<text x="${noteX}" y="14" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#64748b">${tag}</text>`;
+        }
+      }
+
+      // Ledger lines below bottom line
+      for (let s = bottomStep - 2; s >= note.writtenStep; s -= 2) {
+        const ly = getStepY(s);
+        out += `<line x1="${noteX - 22 * scale}" y1="${ly}" x2="${noteX + 22 * scale}" y2="${ly}" stroke="${color}" stroke-width="${1.8 * scale}" />`;
+      }
+
+      // Ledger lines above top line
+      for (let s = topStep + 2; s <= note.writtenStep; s += 2) {
+        const ly = getStepY(s);
+        out += `<line x1="${noteX - 22 * scale}" y1="${ly}" x2="${noteX + 22 * scale}" y2="${ly}" stroke="${color}" stroke-width="${1.8 * scale}" />`;
+      }
+
+      // Accidental (# or b)
+      if (note.accidental) {
+        const symbol = note.accidental === "#" ? "♯" : "♭";
+        out += `<text x="${noteX - 31 * scale}" y="${noteY + 7 * scale}" font-family="Georgia, serif" font-size="${25 * scale}" font-weight="bold" fill="${color}">${symbol}</text>`;
+      }
+
+      // Notehead
+      out += `<ellipse cx="${noteX}" cy="${noteY}" rx="${11.5 * scale}" ry="${8.2 * scale}" transform="rotate(-18 ${noteX} ${noteY})" fill="${color}" />`;
+
+      // Stem
+      const middleLineStep = bottomStep + 4;
+      const stemLen = 45 * scale;
+      const stemOffset = 10.2 * scale;
+      if (note.writtenStep >= middleLineStep) {
+        out += `<line x1="${noteX - stemOffset}" y1="${noteY + 2}" x2="${noteX - stemOffset}" y2="${noteY + stemLen}" stroke="${color}" stroke-width="${2.2 * scale}" />`;
+      } else {
+        out += `<line x1="${noteX + stemOffset}" y1="${noteY - 2}" x2="${noteX + stemOffset}" y2="${noteY - stemLen}" stroke="${color}" stroke-width="${2.2 * scale}" />`;
+      }
+
+      out += `</g>`;
+      return out;
+    }
+
+    function drawGrandStaffNote(note, noteX, trebleBottomY, bassBottomY, stepPx, role) {
+      if (!note) return "";
+
+      const isCurrent = role === "current";
+      const isPrev = role === "prev";
+      const color = isCurrent ? "#0f172a" : isPrev ? "#64748b" : "#475569";
+      const opacity = isCurrent ? 1 : isPrev ? 0.34 : 0.52;
+      const scale = isCurrent ? 1 : 0.84;
+
+      const useTreble = note.writtenStep >= 0;
+      const noteY = useTreble
+        ? trebleBottomY - (note.writtenStep - 2) * stepPx
+        : bassBottomY - (note.writtenStep + 10) * stepPx;
+
+      let out = `<g opacity="${opacity}">`;
+
+      if (state.lookAhead) {
+        if (isCurrent) {
+          out += `
+            <rect x="${noteX - 22}" y="18" width="44" height="186" rx="8" fill="rgba(245, 158, 11, 0.10)" stroke="rgba(245, 158, 11, 0.38)" stroke-width="1.2" />
+            <text x="${noteX}" y="13" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#d97706">NOW</text>
+          `;
+        } else {
+          out += `<text x="${noteX}" y="13" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#64748b">${isPrev ? "PREV" : "NEXT"}</text>`;
+        }
+      }
+
+      if (useTreble) {
+        for (let s = 0; s >= note.writtenStep; s -= 2) {
+          const ly = trebleBottomY - (s - 2) * stepPx;
+          out += `<line x1="${noteX - 18 * scale}" y1="${ly}" x2="${noteX + 18 * scale}" y2="${ly}" stroke="${color}" stroke-width="${1.6 * scale}" />`;
+        }
+        for (let s = 12; s <= note.writtenStep; s += 2) {
+          const ly = trebleBottomY - (s - 2) * stepPx;
+          out += `<line x1="${noteX - 18 * scale}" y1="${ly}" x2="${noteX + 18 * scale}" y2="${ly}" stroke="${color}" stroke-width="${1.6 * scale}" />`;
+        }
+      } else {
+        for (let s = 0; s <= note.writtenStep; s += 2) {
+          const ly = bassBottomY - (s + 10) * stepPx;
+          out += `<line x1="${noteX - 18 * scale}" y1="${ly}" x2="${noteX + 18 * scale}" y2="${ly}" stroke="${color}" stroke-width="${1.6 * scale}" />`;
+        }
+        for (let s = -12; s >= note.writtenStep; s -= 2) {
+          const ly = bassBottomY - (s + 10) * stepPx;
+          out += `<line x1="${noteX - 18 * scale}" y1="${ly}" x2="${noteX + 18 * scale}" y2="${ly}" stroke="${color}" stroke-width="${1.6 * scale}" />`;
+        }
+      }
+
+      if (note.accidental) {
+        const sym = note.accidental === "#" ? "♯" : "♭";
+        out += `<text x="${noteX - 27 * scale}" y="${noteY + 6 * scale}" font-family="Georgia, serif" font-size="${21 * scale}" font-weight="bold" fill="${color}">${sym}</text>`;
+      }
+
+      out += `<ellipse cx="${noteX}" cy="${noteY}" rx="${9.5 * scale}" ry="${6.6 * scale}" transform="rotate(-18 ${noteX} ${noteY})" fill="${color}" />`;
+      const midStep = useTreble ? 6 : -6;
+      const stemLen = 35 * scale;
+      const stemOff = 8.5 * scale;
+      if (note.writtenStep >= midStep) {
+        out += `<line x1="${noteX - stemOff}" y1="${noteY + 2}" x2="${noteX - stemOff}" y2="${noteY + stemLen}" stroke="${color}" stroke-width="${2 * scale}" />`;
+      } else {
+        out += `<line x1="${noteX + stemOff}" y1="${noteY - 2}" x2="${noteX + stemOff}" y2="${noteY - stemLen}" stroke="${color}" stroke-width="${2 * scale}" />`;
+      }
+
+      out += `</g>`;
+      return out;
+    }
+
+    function renderStaff(currentNote) {
+      const svg = document.getElementById("staff-svg");
+      const inst = INSTRUMENTS[state.instrumentKey];
+      const clefType = inst.clef;
+
+      // Grand Staff Renderer (Piano / Marimba)
+      if (clefType === "grand") {
+        svg.setAttribute("viewBox", "0 0 480 225");
+        const stepPx = 5.5;
+        const trebleBottomY = 86;
+        const bassBottomY = 178;
+
+        let html = "";
+        for (let s = 2; s <= 10; s += 2) {
+          const y = trebleBottomY - (s - 2) * stepPx;
+          html += `<line x1="40" y1="${y}" x2="452" y2="${y}" stroke="#334155" stroke-width="1.4" />`;
+        }
+        for (let s = -10; s <= -2; s += 2) {
+          const y = bassBottomY - (s + 10) * stepPx;
+          html += `<line x1="40" y1="${y}" x2="452" y2="${y}" stroke="#334155" stroke-width="1.4" />`;
+        }
+        html += `<line x1="40" y1="${trebleBottomY - 8 * stepPx}" x2="40" y2="${bassBottomY}" stroke="#0f172a" stroke-width="2.4" />`;
+        html += `<text x="48" y="92" font-family="Georgia, serif" font-size="78" fill="#0f172a">&#119070;</text>`;
+        html += `<text x="48" y="176" font-family="Georgia, serif" font-size="64" fill="#0f172a">&#119074;</text>`;
+
+        if (state.lookAhead) {
+          html += drawGrandStaffNote(state.prevNote, 186, trebleBottomY, bassBottomY, stepPx, "prev");
+          html += drawGrandStaffNote(currentNote, 286, trebleBottomY, bassBottomY, stepPx, "current");
+          html += drawGrandStaffNote(state.nextNoteObj, 386, trebleBottomY, bassBottomY, stepPx, "next");
+        } else {
+          html += drawGrandStaffNote(currentNote, 268, trebleBottomY, bassBottomY, stepPx, "current");
+        }
+
+        svg.innerHTML = html;
+        return;
+      }
+
+      // Single 5-Line Staff (Treble, Alto, or Bass)
+      svg.setAttribute("viewBox", "0 0 480 190");
+      const baseLineY = 128;
+      const stepPx = 7.5;
+      const bottomStep = clefType.startsWith("bass") ? -10 : clefType === "alto" ? -4 : 2;
+      const topStep = bottomStep + 8;
+      const getStepY = (step) => baseLineY - (step - bottomStep) * stepPx;
+
+      let html = "";
+      for (let i = 0; i < 5; i++) {
+        const y = getStepY(bottomStep + i * 2);
+        html += `<line x1="32" y1="${y}" x2="452" y2="${y}" stroke="#334155" stroke-width="1.6" />`;
+      }
+
+      if (clefType.startsWith("bass")) {
+        html += `<text x="46" y="124" font-family="Georgia, serif" font-size="86" fill="#0f172a">&#119074;</text>`;
+        if (clefType === "bass8vb") {
+          html += `<text x="70" y="152" font-family="sans-serif" font-size="14" font-weight="800" fill="#0f172a">8</text>`;
+        }
+      } else if (clefType === "alto") {
+        const midY = getStepY(0);
+        html += `
+          <rect x="48" y="${midY - 30}" width="5" height="60" fill="#0f172a" />
+          <rect x="57" y="${midY - 30}" width="2.2" height="60" fill="#0f172a" />
+          <path d="M 60 ${midY} C 68 ${midY - 6}, 82 ${midY - 28}, 68 ${midY - 30} C 62 ${midY - 30}, 60 ${midY - 20}, 66 ${midY - 18}" fill="none" stroke="#0f172a" stroke-width="3.2" />
+          <path d="M 60 ${midY} C 68 ${midY + 6}, 82 ${midY + 28}, 68 ${midY + 30} C 62 ${midY + 30}, 60 ${midY + 20}, 66 ${midY + 18}" fill="none" stroke="#0f172a" stroke-width="3.2" />
+        `;
+      } else {
+        html += `<text x="46" y="139" font-family="Georgia, serif" font-size="112" fill="#0f172a">&#119070;</text>`;
+        if (clefType === "treble8vb") {
+          html += `<text x="70" y="164" font-family="sans-serif" font-size="14" font-weight="800" fill="#0f172a">8</text>`;
+        }
+      }
+
+      if (state.lookAhead) {
+        html += drawSingleStaffNote(state.prevNote, 184, getStepY, bottomStep, topStep, "prev");
+        html += drawSingleStaffNote(currentNote, 286, getStepY, bottomStep, topStep, "current");
+        html += drawSingleStaffNote(state.nextNoteObj, 388, getStepY, bottomStep, topStep, "next");
+      } else {
+        html += drawSingleStaffNote(currentNote, 268, getStepY, bottomStep, topStep, "current");
+      }
+
+      svg.innerHTML = html;
+    }
+
+    // =========================================================================
+    // 6. INSTRUMENT SURFACE RENDERER (FRETTED, FRETLESS, PIANO, 3-VALVE BRASS)
+    // =========================================================================
+    function renderInstrumentSurface() {
+      const svgWrap = document.getElementById("svg-surface-wrap");
+      const brassWrap = document.getElementById("brass-surface-wrap");
+      const svg = document.getElementById("instrument-svg");
+      const inst = INSTRUMENTS[state.instrumentKey];
+
+      if (inst.surfaceType === "valves") {
+        svgWrap.style.display = "none";
+        brassWrap.style.display = "flex";
+        updateBrassValveUI();
+        return;
+      }
+
+      svgWrap.style.display = "block";
+      brassWrap.style.display = "none";
+
+      if (inst.surfaceType === "keyboard") {
+        renderPianoKeyboard(svg);
+        return;
+      }
+
+      const totalFrets = inst.totalFrets || 12;
+      const nutX = 86;
+      const boardLeft = 24;
+      const boardRight = 942;
+      const boardTop = 22;
+      const numStrings = inst.strings.length;
+      const boardHeight = Math.max(165, numStrings * 34);
+      const boardBottom = boardTop + boardHeight;
+      svg.setAttribute("viewBox", `0 0 960 ${boardBottom + 36}`);
+
+      const fretX = [nutX];
+      const scaleLen = 1480;
+      for (let f = 1; f <= totalFrets; f++) {
+        const dist = scaleLen * (1 - Math.pow(2, -f / 12));
+        fretX.push(nutX + dist * 1.14);
+      }
+
+      const woodTop = inst.fretless ? "#1e1b18" : "#3b2316";
+      const woodMid = inst.fretless ? "#141210" : "#2a180e";
+
+      let html = `
+        <defs>
+          <linearGradient id="fingerboard" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${woodTop}" />
+            <stop offset="50%" stop-color="${woodMid}" />
+            <stop offset="100%" stop-color="#120d0a" />
+          </linearGradient>
+        </defs>
+        <rect x="${boardLeft}" y="${boardTop}" width="${nutX - boardLeft}" height="${boardHeight}" rx="8" fill="#18120e" stroke="#443024" stroke-width="1.5" />
+        <rect x="${nutX}" y="${boardTop}" width="${boardRight - nutX}" height="${boardHeight}" rx="6" fill="url(#fingerboard)" stroke="#4a3222" stroke-width="1.5" />
+      `;
+
+      const midY = (boardTop + boardBottom) / 2;
+      if (!inst.fretless) {
+        [3, 5, 7, 10].forEach((f) => {
+          const cx = (fretX[f - 1] + fretX[f]) / 2;
+          html += `<circle cx="${cx}" cy="${midY}" r="6" fill="#e2e8f0" opacity="0.7" />`;
+        });
+        const cx12 = (fretX[11] + fretX[12]) / 2;
+        html += `
+          <circle cx="${cx12}" cy="${midY - boardHeight * 0.22}" r="5.5" fill="#e2e8f0" opacity="0.75" />
+          <circle cx="${cx12}" cy="${midY + boardHeight * 0.22}" r="5.5" fill="#e2e8f0" opacity="0.75" />
+        `;
+      } else {
+        [2, 5, 7].forEach((f) => {
+          const cx = (fretX[f - 1] + fretX[f]) / 2;
+          html += `<line x1="${cx}" y1="${boardTop + 4}" x2="${cx}" y2="${boardBottom - 4}" stroke="#f59e0b" stroke-width="1.4" stroke-dasharray="4 4" opacity="0.35" />`;
+        });
+      }
+
+      html += `<rect x="${nutX - 5}" y="${boardTop}" width="8" height="${boardHeight}" fill="#f8fafc" rx="2" />`;
+      html += `<text x="${(boardLeft + nutX - 5) / 2}" y="${boardBottom + 22}" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="700">OPEN</text>`;
+
+      for (let f = 1; f <= totalFrets; f++) {
+        const x = fretX[f];
+        const isOutOfRange = f > state.rangeSetting;
+        if (inst.fretless) {
+          html += `<line x1="${x}" y1="${boardTop}" x2="${x}" y2="${boardBottom}" stroke="#475569" stroke-width="1" stroke-dasharray="2 4" opacity="${isOutOfRange ? 0.2 : 0.45}" />`;
+        } else {
+          html += `<line x1="${x}" y1="${boardTop}" x2="${x}" y2="${boardBottom}" stroke="#cbd5e1" stroke-width="2.3" opacity="${isOutOfRange ? 0.35 : 0.9}" />`;
+        }
+        const labelX = (fretX[f - 1] + x) / 2;
+        const isMarker = [3, 5, 7, 10, 12].includes(f);
+        html += `<text x="${labelX}" y="${boardBottom + 22}" text-anchor="middle" fill="${isMarker ? "#f59e0b" : "#64748b"}" font-size="11.5" font-weight="${isMarker ? "800" : "600"}">${f}</text>`;
+      }
+
+      if (state.rangeSetting < totalFrets) {
+        const dimStart = fretX[state.rangeSetting];
+        html += `<rect x="${dimStart}" y="${boardTop}" width="${boardRight - dimStart}" height="${boardHeight}" fill="#0f1115" opacity="0.58" pointer-events="none" />`;
+      }
+
+      const orderedStrings = state.tabOrientation ? [...inst.strings].reverse() : [...inst.strings];
+      const stringSpacing = boardHeight / numStrings;
+
+      orderedStrings.forEach((strObj, rowIdx) => {
+        const y = boardTop + stringSpacing * (rowIdx + 0.5);
+        const isStringActive = state.activeStrings.has(strObj.index);
+        const strokeColor = strObj.wound ? "#d97706" : "#e2e8f0";
+        const startFret = strObj.startFret || 0;
+        const stringStartX = startFret > 0 ? fretX[startFret] : boardLeft + 4;
+
+        html += `<text x="12" y="${y + 4}" text-anchor="middle" fill="${isStringActive ? "#f8fafc" : "#475569"}" font-size="11" font-weight="800">${strObj.name}</text>`;
+
+        if (startFret > 0) {
+          html += `<circle cx="${stringStartX}" cy="${y}" r="5" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" />`;
+        }
+
+        const offsets = inst.dualCourse ? [-1.7, 1.7] : [0];
+        offsets.forEach((offset) => {
+          html += `<line x1="${stringStartX}" y1="${y + offset}" x2="${boardRight - 4}" y2="${y + offset}" stroke="${strokeColor}" stroke-width="${strObj.gauge * 0.65}" opacity="${isStringActive ? 0.92 : 0.25}" />`;
+        });
+
+        for (let f = startFret; f <= totalFrets; f++) {
+          const fretOffset = f - startFret;
+          const midi = strObj.openMidi + fretOffset;
+          const noteInfo = getNoteInfo(midi, state.accidentals, inst.displayShift);
+
+          const cellLeft = f === 0 ? boardLeft : fretX[f - 1];
+          const cellRight = f === 0 ? nutX - 4 : fretX[f];
+          const cx = (cellLeft + cellRight) / 2;
+          const cellW = cellRight - cellLeft;
+
+          const isTargetMatch =
+            state.hintTriggeredOnNote &&
+            state.currentNote &&
+            isStringActive &&
+            f <= state.rangeSetting &&
+            (state.matchMode === "exact"
+              ? midi === state.currentNote.midi
+              : noteInfo.pitchClass === state.currentNote.pitchClass);
+
+          html += `
+            <g class="fret-hit" data-str="${strObj.index}" data-fret="${f}" data-midi="${midi}">
+              <rect x="${cellLeft}" y="${y - stringSpacing / 2}" width="${cellW}" height="${stringSpacing}" fill="transparent" />
+              <circle class="hover-ring" cx="${cx}" cy="${y}" r="13" fill="rgba(245, 158, 11, 0.25)" stroke="#fbbf24" stroke-width="1.8" opacity="0" />
+          `;
+
+          if (isTargetMatch) {
+            html += `
+              <circle cx="${cx}" cy="${y}" r="14.5" fill="rgba(245, 158, 11, 0.38)" stroke="#fbbf24" stroke-width="2.5">
+                <animate attributeName="r" values="12.5;16.5;12.5" dur="1.1s" repeatCount="indefinite" />
+              </circle>
+              <text x="${cx}" y="${y + 4}" text-anchor="middle" fill="#fff" font-size="10" font-weight="800" pointer-events="none">${noteInfo.shortName}</text>
+            `;
+          } else if (state.studyLabels && isStringActive && f <= state.rangeSetting) {
+            html += `
+              <circle cx="${cx}" cy="${y}" r="11" fill="#1e293b" stroke="#64748b" stroke-width="1.2" pointer-events="none" />
+              <text x="${cx}" y="${y + 3.6}" text-anchor="middle" fill="#f1f5f9" font-size="9" font-weight="700" pointer-events="none">${noteInfo.shortName}</text>
+            `;
+          }
+
+          html += `</g>`;
+        }
+      });
+
+      svg.innerHTML = html;
+
+      svg.querySelectorAll(".fret-hit").forEach((el) => {
+        el.addEventListener("click", () => {
+          const midi = parseInt(el.dataset.midi, 10);
+          handleSurfaceNoteClick(midi);
+        });
+      });
+    }
+
+    function renderPianoKeyboard(svg) {
+      svg.setAttribute("viewBox", "0 0 960 205");
+      const startMidi = 48;
+      const endMidi = 83;
+      const whiteNotes = [];
+      const blackNotes = [];
+
+      for (let m = startMidi; m <= endMidi; m++) {
+        const pc = m % 12;
+        const isBlack = [1, 3, 6, 8, 10].includes(pc);
+        if (!isBlack) {
+          whiteNotes.push({ midi: m, whiteIdx: whiteNotes.length });
+        } else {
+          blackNotes.push({ midi: m, afterWhiteIdx: whiteNotes.length - 1 });
+        }
+      }
+
+      const leftPad = 18;
+      const boardW = 924;
+      const whiteW = boardW / whiteNotes.length;
+      const whiteH = 178;
+      const blackW = whiteW * 0.62;
+      const blackH = 112;
+
+      let html = `<rect x="10" y="8" width="940" height="190" rx="10" fill="#0b0d11" stroke="#334155" stroke-width="1.5" />`;
+
+      whiteNotes.forEach((wk) => {
+        const x = leftPad + wk.whiteIdx * whiteW;
+        const info = getNoteInfo(wk.midi, state.accidentals, 0);
+        const octIdx = Math.floor((wk.midi - 48) / 12);
+        const isActive = state.activeStrings.has(octIdx);
+
+        const isTarget =
+          state.hintTriggeredOnNote &&
+          state.currentNote &&
+          isActive &&
+          (state.matchMode === "exact"
+            ? wk.midi === state.currentNote.midi
+            : info.pitchClass === state.currentNote.pitchClass);
+
+        const fill = isTarget ? "#fbbf24" : isActive ? "#f8fafc" : "#64748b";
+
+        html += `
+          <g class="piano-key" data-midi="${wk.midi}">
+            <rect x="${x + 1}" y="14" width="${whiteW - 2}" height="${whiteH}" rx="5" fill="${fill}" stroke="#1e293b" stroke-width="1.5" />
+        `;
+        if (state.studyLabels || wk.midi === 60 || isTarget) {
+          const label = wk.midi === 60 && !state.studyLabels && !isTarget ? "C4" : info.fullName;
+          html += `<text x="${x + whiteW / 2}" y="${whiteH + 2}" text-anchor="middle" fill="${isTarget ? "#0f172a" : "#334155"}" font-size="10.5" font-weight="800" pointer-events="none">${label}</text>`;
+        }
+        html += `</g>`;
+      });
+
+      blackNotes.forEach((bk) => {
+        const x = leftPad + (bk.afterWhiteIdx + 1) * whiteW - blackW / 2;
+        const info = getNoteInfo(bk.midi, state.accidentals, 0);
+        const octIdx = Math.floor((bk.midi - 48) / 12);
+        const isActive = state.activeStrings.has(octIdx);
+
+        const isTarget =
+          state.hintTriggeredOnNote &&
+          state.currentNote &&
+          isActive &&
+          (state.matchMode === "exact"
+            ? bk.midi === state.currentNote.midi
+            : info.pitchClass === state.currentNote.pitchClass);
+
+        const fill = isTarget ? "#f59e0b" : isActive ? "#1e293b" : "#0f172a";
+
+        html += `
+          <g class="piano-key" data-midi="${bk.midi}">
+            <rect x="${x}" y="14" width="${blackW}" height="${blackH}" rx="4" fill="${fill}" stroke="#090b0e" stroke-width="1.5" />
+        `;
+        if (state.studyLabels || isTarget) {
+          html += `<text x="${x + blackW / 2}" y="${blackH + 4}" text-anchor="middle" fill="#f8fafc" font-size="8.5" font-weight="700" pointer-events="none">${info.shortName}</text>`;
+        }
+        html += `</g>`;
+      });
+
+      svg.innerHTML = html;
+
+      svg.querySelectorAll(".piano-key").forEach((el) => {
+        el.addEventListener("click", () => {
+          handleSurfaceNoteClick(parseInt(el.dataset.midi, 10));
+        });
+      });
+    }
+
+    function getPressedValveString() {
+      const sorted = Array.from(state.pressedValves).sort();
+      return sorted.length === 0 ? "0" : sorted.join("");
+    }
+
+    function updateBrassValveUI() {
+      const inst = INSTRUMENTS[state.instrumentKey];
+      if (!inst || inst.surfaceType !== "valves") return;
+
+      const combo = getPressedValveString();
+      document.getElementById("valve-readout").textContent =
+        combo === "0" ? "Selected Fingering: Open (0)" : `Selected Fingering: Valves ${combo}`;
+
+      let targetCombo = "";
+      if (state.currentNote && (state.hintTriggeredOnNote || state.studyLabels)) {
+        const list = inst.fingerings[state.currentNote.writtenMidi] || [];
+        targetCombo = list[0] || "";
+      }
+
+      [1, 2, 3].forEach((v) => {
+        const el = document.getElementById(`valve-${v}`);
+        el.classList.toggle("pressed", state.pressedValves.has(v));
+        el.classList.toggle("hint-valve", targetCombo.includes(String(v)));
+      });
+
+      if (state.studyLabels && state.currentNote) {
+        const valid = (inst.fingerings[state.currentNote.writtenMidi] || []).join(" or ");
+        document.getElementById("orientation-label").textContent = `Study Hint: Fingering ${valid}`;
+      } else {
+        document.getElementById("orientation-label").textContent = "Toggle Valves 1, 2, 3 (or leave Open) & Click Play";
+      }
+    }
+
+    function submitBrassFingering() {
+      const inst = INSTRUMENTS[state.instrumentKey];
+      if (!state.currentNote || inst.surfaceType !== "valves") return;
+      if (state.mode === "buttons") return;
+
+      if (state.autoHideOnStart && !state.zenMode && state.completedCount === 0) {
+        setZenMode(true);
+      }
+
+      if (state.mode === "hybrid" && state.hybridStep === "letter") {
+        setFeedback("First select the written note name (A–G) above!", "hint");
+        return;
+      }
+
+      const combo = getPressedValveString();
+      const validCombos = inst.fingerings[state.currentNote.writtenMidi] || [];
+      playInstrumentTone(state.currentNote.midi);
+
+      if (validCombos.includes(combo)) {
+        state.pressedValves.clear();
+        completeCurrentNote();
+      } else {
+        state.wrongAttemptsOnNote++;
+        playErrorBuzz();
+        flashStage("flash-bad");
+        setFeedback(`Valves ${combo} doesn't match ${state.currentNote.fullName} — try again!`, "bad");
+      }
+    }
+
+    // =========================================================================
+    // 7. INSTRUMENT SWITCHER & DYNAMIC CONTROLS
+    // =========================================================================
+    function populateInstrumentDropdown() {
+      const sel = document.getElementById("sel-instrument");
+      const groups = {};
+      Object.entries(INSTRUMENTS).forEach(([key, inst]) => {
+        if (!groups[inst.group]) groups[inst.group] = [];
+        groups[inst.group].push({ key, name: inst.name });
+      });
+
+      sel.innerHTML = Object.entries(groups)
+        .map(
+          ([groupName, items]) =>
+            `<optgroup label="${groupName}">${items
+              .map((i) => `<option value="${i.key}">${i.name}</option>`)
+              .join("")}</optgroup>`
+        )
+        .join("");
+    }
+
+    function applyInstrumentProfile(key) {
+      state.instrumentKey = key;
+      state.pressedValves.clear();
+      const inst = INSTRUMENTS[key];
+
+      document.getElementById("app-title").textContent = `FretClef · ${inst.name}`;
+      document.getElementById("app-subtitle").textContent = inst.tuningLabel;
+      document.getElementById("clef-tag").textContent = CLEF_LABELS[inst.clef];
+      document.getElementById("surface-title-text").textContent =
+        inst.surfaceType === "keyboard"
+          ? `${inst.name} (C3–B5)`
+          : inst.surfaceType === "valves"
+          ? `${inst.name} Valve Block`
+          : inst.fretless
+          ? `${inst.name} Fingerboard (Fretless)`
+          : `${inst.name} Fretboard`;
+
+      const rangeSel = document.getElementById("sel-range");
+      rangeSel.innerHTML = inst.ranges
+        .map((r) => `<option value="${r.value}">${r.label}</option>`)
+        .join("");
+      state.rangeSetting = inst.ranges[0].value;
+
+      const chipWrap = document.getElementById("string-toggles");
+      state.activeStrings = new Set(inst.strings.map((s) => s.index));
+      const orderedChips =
+        inst.surfaceType === "fretted" ? [...inst.strings].reverse() : [...inst.strings];
+
+      chipWrap.innerHTML = orderedChips
+        .map((s) => `<button class="chip selected" data-str="${s.index}">${s.name}</button>`)
+        .join("");
+
+      chipWrap.querySelectorAll(".chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          const idx = parseInt(chip.dataset.str, 10);
+          if (state.activeStrings.has(idx)) {
+            if (state.activeStrings.size === 1) return;
+            state.activeStrings.delete(idx);
+            chip.classList.remove("selected");
+          } else {
+            state.activeStrings.add(idx);
+            chip.classList.add("selected");
+          }
+          resetQueueAndNext();
+        });
+      });
+
+      const flipBtn = document.getElementById("btn-flip");
+      const oriBadge = document.getElementById("orientation-label");
+      if (inst.surfaceType === "keyboard") {
+        flipBtn.style.display = "none";
+        oriBadge.textContent = "Low C3 (Left) → High B5 (Right)";
+      } else if (inst.surfaceType === "valves") {
+        flipBtn.style.display = "none";
+        oriBadge.textContent = "Toggle Valves 1, 2, 3 (or leave Open) & Click Play";
+      } else {
+        flipBtn.style.display = "inline-flex";
+        oriBadge.textContent = state.tabOrientation
+          ? "TAB View (High Top → Low Bottom)"
+          : "Player's POV (Low Top → High Bottom)";
+      }
+
+      savePreferences();
+      resetSession();
+    }
+
+    // =========================================================================
+    // 8. NOTE POOL GENERATION & LOOK-AHEAD QUEUE ENGINE
+    // =========================================================================
+    function buildCandidatePool() {
+      const inst = INSTRUMENTS[state.instrumentKey];
+      const candidates = new Map();
+
+      if (inst.surfaceType === "keyboard") {
+        inst.strings.forEach((oct) => {
+          if (!state.activeStrings.has(oct.index)) return;
+          for (let m = oct.startMidi; m <= oct.endMidi; m++) {
+            if (state.rangeSetting === "treble" && m < 60) continue;
+            if (state.rangeSetting === "bass" && m >= 72) continue;
+            const info = getNoteInfo(m, state.accidentals, 0);
+            if (state.accidentals === "natural" && info.accidental !== "") continue;
+            candidates.set(m, info);
+          }
+        });
+      } else if (inst.surfaceType === "valves") {
+        inst.strings.forEach((reg) => {
+          if (!state.activeStrings.has(reg.index)) return;
+          for (let w = reg.minW; w <= reg.maxW; w++) {
+            if (!inst.fingerings[w]) continue;
+            if (state.rangeSetting === "beginner" && (w < 60 || w > 67)) continue;
+            if (state.rangeSetting === "intermediate" && (w < 55 || w > 76)) continue;
+            const soundMidi = w - inst.displayShift;
+            const info = getNoteInfo(soundMidi, state.accidentals, inst.displayShift);
+            if (state.accidentals === "natural" && info.accidental !== "") continue;
+            candidates.set(soundMidi, info);
+          }
+        });
+      } else {
+        inst.strings.forEach((s) => {
+          if (!state.activeStrings.has(s.index)) return;
+          const startFret = s.startFret || 0;
+          for (let f = startFret; f <= state.rangeSetting; f++) {
+            const midi = s.openMidi + (f - startFret);
+            const info = getNoteInfo(midi, state.accidentals, inst.displayShift);
+            if (state.accidentals === "natural" && info.accidental !== "") continue;
+            candidates.set(midi, info);
+          }
+        });
+      }
+
+      return Array.from(candidates.values());
+    }
+
+    function drawRandomNoteFromPool(pool, excludeMidi = null) {
+      if (pool.length === 0) return null;
+      let picked = pool[Math.floor(Math.random() * pool.length)];
+      if (pool.length > 1 && excludeMidi !== null && picked.midi === excludeMidi) {
+        picked = pool[(pool.indexOf(picked) + 1) % pool.length];
+      }
+      return picked;
+    }
+
+    function resetQueueAndNext() {
+      state.prevNote = null;
+      state.currentNote = null;
+      state.nextNoteObj = null;
+      nextNote();
+    }
+
+    function nextNote() {
+      clearHintTimer();
+      const pool = buildCandidatePool();
+      if (pool.length === 0) return;
+
+      // Advance the rolling 3-note queue (prev <- current <- next <- new random)
+      if (!state.currentNote) {
+        state.prevNote = null;
+        state.currentNote = drawRandomNoteFromPool(pool);
+        state.nextNoteObj = drawRandomNoteFromPool(pool, state.currentNote.midi);
+      } else {
+        state.prevNote = state.currentNote;
+        state.currentNote = state.nextNoteObj || drawRandomNoteFromPool(pool, state.prevNote.midi);
+        state.nextNoteObj = drawRandomNoteFromPool(pool, state.currentNote.midi);
+      }
+
+      state.hybridStep = "letter";
+      state.wrongAttemptsOnNote = 0;
+      state.hintTriggeredOnNote = false;
+      state.pressedValves.clear();
+      state.noteStartTime = performance.now();
+      state.lastTickSecond = null;
+
+      if (state.completedCount === 0 && !state.sessionStartTime) {
+        state.sessionStartTime = performance.now();
+      }
+
+      document.querySelectorAll(".note-btn").forEach((b) => {
+        b.classList.remove("locked-correct", "hint-pulse");
+      });
+      setFeedback("", "");
+      updatePromptText();
+      renderStaff(state.currentNote);
+      renderInstrumentSurface();
+      startHintTimer();
+    }
+
+    function updatePromptText() {
+      const pill = document.getElementById("prompt-pill");
+      const inst = INSTRUMENTS[state.instrumentKey];
+      const targetWord =
+        inst.surfaceType === "keyboard"
+          ? "piano key"
+          : inst.surfaceType === "valves"
+          ? "valve fingering"
+          : `${inst.name.toLowerCase()} neck`;
+
+      if (state.mode === "surface") {
+        pill.innerHTML = `Select the matching <span class="highlight">${targetWord}</span>`;
+      } else if (state.mode === "buttons") {
+        pill.innerHTML = `Identify the <span class="highlight">note name (A–G)</span>`;
+      } else if (state.mode === "hybrid") {
+        if (state.hybridStep === "letter") {
+          pill.innerHTML = `Step 1 of 2: Click the <span class="highlight">note letter</span>`;
+        } else {
+          pill.innerHTML = `Step 2 of 2: Now enter <span class="highlight">${state.currentNote.shortName}</span> on the ${targetWord}`;
+        }
+      }
+    }
+
+    function setFeedback(text, cls) {
+      const banner = document.getElementById("feedback-banner");
+      banner.textContent = text;
+      banner.className = `feedback-banner ${cls}`;
+    }
+
+    function flashStage(cls) {
+      const card = document.getElementById("stage-card");
+      card.classList.remove("flash-good", "flash-bad", "flash-hint");
+      void card.offsetWidth;
+      card.classList.add(cls);
+      setTimeout(() => card.classList.remove(cls), 420);
+    }
+
+    // =========================================================================
+    // 9. NOVICE HELPER COUNTDOWN TIMER
+    // =========================================================================
+    function clearHintTimer() {
+      if (state.timerHandle) {
+        clearInterval(state.timerHandle);
+        state.timerHandle = null;
+      }
+    }
+
+    function startHintTimer() {
+      const wrap = document.getElementById("hint-timer-wrap");
+      const fill = document.getElementById("hint-fill");
+      const clock = document.getElementById("hint-clock");
+
+      if (state.hintSeconds <= 0) {
+        wrap.classList.add("hidden");
+        return;
+      }
+
+      wrap.classList.remove("hidden");
+      fill.style.width = "100%";
+      fill.classList.remove("urgent");
+      clock.textContent = `${state.hintSeconds.toFixed(1)}s`;
+
+      const startMs = performance.now();
+      const totalMs = state.hintSeconds * 1000;
+
+      state.timerHandle = setInterval(() => {
+        const elapsed = performance.now() - startMs;
+        const remainingMs = Math.max(0, totalMs - elapsed);
+        const pct = (remainingMs / totalMs) * 100;
+
+        fill.style.width = `${pct}%`;
+        clock.textContent = `${(remainingMs / 1000).toFixed(1)}s`;
+
+        const wholeSecLeft = Math.ceil(remainingMs / 1000);
+        if (wholeSecLeft <= 3 && wholeSecLeft > 0 && wholeSecLeft !== state.lastTickSecond) {
+          state.lastTickSecond = wholeSecLeft;
+          fill.classList.add("urgent");
+          playWoodTick(false);
+        }
+
+        if (remainingMs <= 0) {
+          clearHintTimer();
+          triggerHintReveal();
+        }
+      }, 60);
+    }
+
+    function triggerHintReveal() {
+      if (state.hintTriggeredOnNote) return;
+      state.hintTriggeredOnNote = true;
+      playWoodTick(true);
+      flashStage("flash-hint");
+
+      const inst = INSTRUMENTS[state.instrumentKey];
+      const note = state.currentNote;
+      const needsLetter =
+        state.mode === "buttons" || (state.mode === "hybrid" && state.hybridStep === "letter");
+
+      if (needsLetter) {
+        document.querySelectorAll(".note-btn").forEach((btn) => {
+          if (btn.dataset.letter === note.letter) btn.classList.add("hint-pulse");
+        });
+        setFeedback(`Hint: It's ${note.shortName} — click ${note.letter} to continue`, "hint");
+      } else if (inst.surfaceType === "valves") {
+        const valid = (inst.fingerings[note.writtenMidi] || ["0"])[0];
+        renderInstrumentSurface();
+        setFeedback(`Hint: Fingering for ${note.fullName} is ${valid} — click Play to continue`, "hint");
+      } else {
+        renderInstrumentSurface();
+        setFeedback(`Hint: Highlighted ${note.fullName} — click it to continue`, "hint");
+      }
+    }
+
+    // =========================================================================
+    // 10. INPUT HANDLERS & SESSION COMPLETION
+    // =========================================================================
+    function handleLetterClick(letter) {
+      if (!state.currentNote) return;
+      if (state.mode === "surface") return;
+      if (state.mode === "hybrid" && state.hybridStep === "surface") return;
+
+      if (state.autoHideOnStart && !state.zenMode && state.completedCount === 0) {
+        setZenMode(true);
+      }
+
+      if (letter === state.currentNote.letter) {
+        if (state.mode === "buttons") {
+          playInstrumentTone(state.currentNote.midi);
+          completeCurrentNote();
+        } else if (state.mode === "hybrid") {
+          state.hybridStep = "surface";
+          document.querySelectorAll(".note-btn").forEach((b) => {
+            b.classList.remove("hint-pulse");
+            if (b.dataset.letter === letter) b.classList.add("locked-correct");
+          });
+          setFeedback(`Correct (${state.currentNote.shortName})! Now enter it on the instrument.`, "good");
+          updatePromptText();
+          if (state.hintTriggeredOnNote) renderInstrumentSurface();
+        }
+      } else {
+        state.wrongAttemptsOnNote++;
+        playErrorBuzz();
+        flashStage("flash-bad");
+        setFeedback(`Not ${letter} — try again!`, "bad");
+      }
+    }
+
+    function handleSurfaceNoteClick(midi) {
+      playInstrumentTone(midi);
+
+      if (!state.currentNote) return;
+      if (state.mode === "buttons") return;
+
+      if (state.autoHideOnStart && !state.zenMode && state.completedCount === 0) {
+        setZenMode(true);
+      }
+
+      if (state.mode === "hybrid" && state.hybridStep === "letter") {
+        setFeedback("First select the note name (A–G) above!", "hint");
+        return;
+      }
+
+      const inst = INSTRUMENTS[state.instrumentKey];
+      const clickedInfo = getNoteInfo(midi, state.accidentals, inst.displayShift);
+      const isMatch =
+        state.matchMode === "exact"
+          ? midi === state.currentNote.midi
+          : clickedInfo.pitchClass === state.currentNote.pitchClass;
+
+      if (isMatch) {
+        completeCurrentNote();
+      } else {
+        state.wrongAttemptsOnNote++;
+        flashStage("flash-bad");
+        setFeedback(`That's ${clickedInfo.fullName} — looking for ${state.currentNote.fullName}`, "bad");
+      }
+    }
+
+    function completeCurrentNote() {
+      clearHintTimer();
+      const solveMs = performance.now() - state.noteStartTime;
+      state.totalSolveMs += solveMs;
+      state.completedCount++;
+
+      if (state.hintTriggeredOnNote) {
+        state.assistedCount++;
+      } else if (state.wrongAttemptsOnNote === 0) {
+        state.cleanCount++;
+      }
+
+      updateStatsHUD();
+      flashStage("flash-good");
+      setFeedback(`✓ ${state.currentNote.fullName} (${(solveMs / 1000).toFixed(2)}s)`, "good");
+
+      if (state.sessionLength > 0 && state.completedCount >= state.sessionLength) {
+        setTimeout(() => showSessionSummary(), 360);
+      } else {
+        setTimeout(() => nextNote(), 340);
+      }
+    }
+
+    function updateStatsHUD() {
+      document.getElementById("stat-progress").textContent =
+        state.sessionLength > 0
+          ? `${state.completedCount} / ${state.sessionLength}`
+          : `${state.completedCount} / ∞`;
+
+      const accPct =
+        state.completedCount === 0
+          ? 100
+          : Math.round((state.cleanCount / state.completedCount) * 100);
+      document.getElementById("stat-acc").textContent = `${accPct}%`;
+
+      const avgSec =
+        state.completedCount === 0
+          ? 0
+          : state.totalSolveMs / state.completedCount / 1000;
+      document.getElementById("stat-avg").textContent = `${avgSec.toFixed(1)}s`;
+      document.getElementById("stat-assisted").textContent = state.assistedCount;
+    }
+
+    function showSessionSummary() {
+      clearHintTimer();
+      setZenMode(false);
+
+      const inst = INSTRUMENTS[state.instrumentKey];
+      const totalSec = (performance.now() - state.sessionStartTime) / 1000;
+      const avgSec = state.totalSolveMs / Math.max(1, state.completedCount) / 1000;
+      const accPct = Math.round((state.cleanCount / Math.max(1, state.completedCount)) * 100);
+
+      document.getElementById("summary-subtitle").textContent =
+        `${inst.name} · ${state.completedCount}-Note Drill Completed`;
+      document.getElementById("sum-time").textContent = `${totalSec.toFixed(1)}s`;
+      document.getElementById("sum-avg").textContent = `${avgSec.toFixed(2)}s`;
+      document.getElementById("sum-acc").textContent = `${accPct}%`;
+      document.getElementById("sum-assisted").textContent = state.assistedCount;
+
+      document.getElementById("summary-overlay").classList.add("open");
+    }
+
+    function resetSession() {
+      clearHintTimer();
+      state.completedCount = 0;
+      state.cleanCount = 0;
+      state.assistedCount = 0;
+      state.totalSolveMs = 0;
+      state.sessionStartTime = 0;
+      document.getElementById("summary-overlay").classList.remove("open");
+      updateStatsHUD();
+      resetQueueAndNext();
+    }
+
+    function applyModeVisibility() {
+      const noteBtns = document.getElementById("note-buttons");
+      const surfSec = document.getElementById("surface-section");
+
+      if (state.mode === "surface") {
+        noteBtns.classList.add("hidden");
+        surfSec.classList.remove("hidden");
+      } else if (state.mode === "buttons") {
+        noteBtns.classList.remove("hidden");
+        surfSec.classList.add("hidden");
+      } else {
+        noteBtns.classList.remove("hidden");
+        surfSec.classList.remove("hidden");
+      }
+    }
+
+    function setZenMode(enabled) {
+      state.zenMode = enabled;
+      document.body.classList.toggle("zen-mode", enabled);
+      document.getElementById("focus-icon").textContent = enabled ? "⚙️" : "👁️";
+      document.getElementById("focus-text").textContent = enabled ? "Show Settings" : "Hide Settings";
+    }
+
+    function toggleLookAhead() {
+      state.lookAhead = !state.lookAhead;
+      const btn = document.getElementById("btn-lookahead");
+      btn.textContent = state.lookAhead ? "👀 Look-Ahead: ON" : "👀 Look-Ahead: OFF";
+      btn.classList.toggle("active", state.lookAhead);
+      savePreferences();
+      renderStaff(state.currentNote);
+    }
+
+    // =========================================================================
+    // 11. EVENT WIRING & BOOTSTRAP
+    // =========================================================================
+    document.getElementById("sel-instrument").addEventListener("change", (e) => {
+      applyInstrumentProfile(e.target.value);
+    });
+
+    document.getElementById("sel-mode").addEventListener("change", (e) => {
+      state.mode = e.target.value;
+      savePreferences();
+      applyModeVisibility();
+      nextNote();
+    });
+
+    document.getElementById("sel-range").addEventListener("change", (e) => {
+      const val = e.target.value;
+      state.rangeSetting = isNaN(Number(val)) ? val : Number(val);
+      resetQueueAndNext();
+    });
+
+    document.getElementById("sel-match").addEventListener("change", (e) => {
+      state.matchMode = e.target.value;
+      renderInstrumentSurface();
+    });
+
+    document.getElementById("sel-accidentals").addEventListener("change", (e) => {
+      state.accidentals = e.target.value;
+      savePreferences();
+      resetQueueAndNext();
+    });
+
+    document.getElementById("sel-hint-timer").addEventListener("change", (e) => {
+      state.hintSeconds = parseInt(e.target.value, 10);
+      savePreferences();
+      nextNote();
+    });
+
+    document.getElementById("sel-session-len").addEventListener("change", (e) => {
+      state.sessionLength = parseInt(e.target.value, 10);
+      savePreferences();
+      resetSession();
+    });
+
+    document.getElementById("chk-auto-hide").addEventListener("change", (e) => {
+      state.autoHideOnStart = e.target.checked;
+      savePreferences();
+    });
+
+    document.getElementById("btn-focus").addEventListener("click", () => {
+      setZenMode(!state.zenMode);
+    });
+
+    document.getElementById("btn-lookahead").addEventListener("click", () => {
+      toggleLookAhead();
+    });
+
+    document.getElementById("btn-audio").addEventListener("click", (e) => {
+      state.audioEnabled = !state.audioEnabled;
+      e.currentTarget.textContent = state.audioEnabled ? "🔊 Sound: ON" : "🔇 Sound: OFF";
+      e.currentTarget.classList.toggle("active", state.audioEnabled);
+      savePreferences();
+    });
+
+    document.getElementById("btn-study").addEventListener("click", (e) => {
+      state.studyLabels = !state.studyLabels;
+      e.currentTarget.textContent = state.studyLabels ? "🏷️ Show All Notes: ON" : "🏷️ Show All Notes: OFF";
+      e.currentTarget.classList.toggle("active", state.studyLabels);
+      renderInstrumentSurface();
+    });
+
+    document.getElementById("btn-flip").addEventListener("click", () => {
+      state.tabOrientation = !state.tabOrientation;
+      document.getElementById("orientation-label").textContent = state.tabOrientation
+        ? "TAB View (High Top → Low Bottom)"
+        : "Player's POV (Low Top → High Bottom)";
+      savePreferences();
+      renderInstrumentSurface();
+    });
+
+    // Brass Valve Controls
+    [1, 2, 3].forEach((v) => {
+      document.getElementById(`valve-${v}`).addEventListener("click", () => {
+        if (state.pressedValves.has(v)) {
+          state.pressedValves.delete(v);
+        } else {
+          state.pressedValves.add(v);
+        }
+        updateBrassValveUI();
+      });
+    });
+
+    document.getElementById("btn-submit-valves").addEventListener("click", () => submitBrassFingering());
+    document.getElementById("btn-clear-valves").addEventListener("click", () => {
+      state.pressedValves.clear();
+      updateBrassValveUI();
+    });
+
+    document.getElementById("btn-hear").addEventListener("click", () => {
+      if (state.currentNote) playInstrumentTone(state.currentNote.midi);
+    });
+
+    document.getElementById("btn-skip").addEventListener("click", () => nextNote());
+    document.getElementById("btn-reset").addEventListener("click", () => resetSession());
+    document.getElementById("btn-run-again").addEventListener("click", () => resetSession());
+
+    document.querySelectorAll(".note-btn").forEach((btn) => {
+      btn.addEventListener("click", () => handleLetterClick(btn.dataset.letter));
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.target.tagName === "SELECT" || e.target.tagName === "INPUT") return;
+      const key = e.key.toUpperCase();
+      const inst = INSTRUMENTS[state.instrumentKey];
+
+      if (["A", "B", "C", "D", "E", "F", "G"].includes(key)) {
+        e.preventDefault();
+        handleLetterClick(key);
+      } else if (inst.surfaceType === "valves" && ["1", "2", "3"].includes(e.key)) {
+        e.preventDefault();
+        const v = Number(e.key);
+        if (state.pressedValves.has(v)) state.pressedValves.delete(v);
+        else state.pressedValves.add(v);
+        updateBrassValveUI();
+      } else if (inst.surfaceType === "valves" && e.key === "Enter") {
+        e.preventDefault();
+        submitBrassFingering();
+      } else if (e.code === "Space") {
+        e.preventDefault();
+        if (state.currentNote) playInstrumentTone(state.currentNote.midi);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        nextNote();
+      } else if (key === "H") {
+        e.preventDefault();
+        setZenMode(!state.zenMode);
+      } else if (key === "L") {
+        e.preventDefault();
+        toggleLookAhead();
+      }
+    });
+
+    // Boot Application
+    loadPreferences();
+    populateInstrumentDropdown();
+
+    // Sync restored preferences to UI controls
+    document.getElementById("sel-instrument").value = state.instrumentKey;
+    document.getElementById("sel-mode").value = state.mode;
+    document.getElementById("sel-accidentals").value = state.accidentals;
+    document.getElementById("sel-hint-timer").value = String(state.hintSeconds);
+    document.getElementById("sel-session-len").value = String(state.sessionLength);
+    document.getElementById("chk-auto-hide").checked = state.autoHideOnStart;
+
+    const audioBtn = document.getElementById("btn-audio");
+    audioBtn.textContent = state.audioEnabled ? "🔊 Sound: ON" : "🔇 Sound: OFF";
+    audioBtn.classList.toggle("active", state.audioEnabled);
+
+    const laBtn = document.getElementById("btn-lookahead");
+    laBtn.textContent = state.lookAhead ? "👀 Look-Ahead: ON" : "👀 Look-Ahead: OFF";
+    laBtn.classList.toggle("active", state.lookAhead);
+
+    applyModeVisibility();
+    applyInstrumentProfile(state.instrumentKey);
+  </script>
+</body>
+</html>
